@@ -85,11 +85,11 @@
           <form data-auth-form="login" class="mt-5 space-y-4">
             <div>
               <label class="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
-              <input name="email" type="email" required class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+              <input name="email" type="email" autocomplete="email" required class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
             </div>
             <div>
               <label class="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
-              <input name="password" type="password" required class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+              <input name="password" type="password" autocomplete="current-password" required class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
             </div>
             <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-3 transition-all">Log In</button>
           </form>
@@ -97,15 +97,15 @@
           <form data-auth-form="signup" class="hidden mt-5 space-y-4">
             <div>
               <label class="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label>
-              <input name="full_name" type="text" required class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+              <input name="full_name" type="text" autocomplete="name" required class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
             </div>
             <div>
               <label class="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
-              <input name="email" type="email" required class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+              <input name="email" type="email" autocomplete="email" required class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
             </div>
             <div>
               <label class="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
-              <input name="password" type="password" required minlength="6" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+              <input name="password" type="password" autocomplete="new-password" required minlength="6" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
             </div>
             <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-3 transition-all">Create Account</button>
           </form>
@@ -133,7 +133,7 @@
             <h2 class="font-bold text-slate-900">Referrals</h2>
             <p class="mt-2 text-sm text-slate-500">Invite a friend and track signups.</p>
             <form id="student-referral-form" class="mt-4 flex flex-col sm:flex-row gap-2">
-              <input name="email" type="email" required placeholder="friend@email.com" class="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+              <input name="email" type="email" autocomplete="email" required placeholder="friend@email.com" class="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
               <button class="bg-brand-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Invite</button>
             </form>
             <div id="student-referrals" class="mt-3 text-xs text-slate-400"></div>
