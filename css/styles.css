@@ -14,6 +14,31 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+input,
+textarea,
+select {
+  color: #0f172a;
+  caret-color: #1d4ed8;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+select option {
+  color: #0f172a;
+  background: #ffffff;
+}
+
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: #0f172a;
+  transition: background-color 9999s ease-out;
+}
+
 /* --------------------------------------------------------------------------
    Loading Screen
    -------------------------------------------------------------------------- */
