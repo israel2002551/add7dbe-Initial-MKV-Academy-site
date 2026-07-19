@@ -70,14 +70,14 @@
             <button type="button" data-auth-tab="signup" class="bg-slate-100 text-slate-600 rounded-lg px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold">Create Account</button>
           </div>
           <form data-auth-form="login" class="mt-5 space-y-4">
-            <input name="email" type="email" required placeholder="Email" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
-            <input name="password" type="password" required placeholder="Password" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+            <input name="email" type="email" autocomplete="email" required placeholder="Email" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+            <input name="password" type="password" autocomplete="current-password" required placeholder="Password" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
             <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-3 transition-all">Log In</button>
           </form>
           <form data-auth-form="signup" class="hidden mt-5 space-y-4">
-            <input name="full_name" type="text" required placeholder="Full name" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
-            <input name="email" type="email" required placeholder="Email" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
-            <input name="password" type="password" required minlength="6" placeholder="Password" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+            <input name="full_name" type="text" autocomplete="name" required placeholder="Full name" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+            <input name="email" type="email" autocomplete="email" required placeholder="Email" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+            <input name="password" type="password" autocomplete="new-password" required minlength="6" placeholder="Password" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
             <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-3 transition-all">Create Account</button>
           </form>
           <p data-auth-message class="hidden"></p>
