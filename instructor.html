@@ -36,8 +36,8 @@
         <button data-login-trigger class="mt-8 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-6 py-3.5">Log In</button>
         <div id="auth-panel" class="hidden mt-8 mkv-card bg-white text-left p-6">
           <form data-auth-form="login" class="space-y-4">
-            <input name="email" type="email" required placeholder="Email" class="w-full rounded-lg border border-slate-200 px-4 py-3" />
-            <input name="password" type="password" required placeholder="Password" class="w-full rounded-lg border border-slate-200 px-4 py-3" />
+            <input name="email" type="email" autocomplete="email" required placeholder="Email" class="w-full rounded-lg border border-slate-200 px-4 py-3" />
+            <input name="password" type="password" autocomplete="current-password" required placeholder="Password" class="w-full rounded-lg border border-slate-200 px-4 py-3" />
             <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-3">Log In</button>
           </form>
           <p data-auth-message class="hidden"></p>
