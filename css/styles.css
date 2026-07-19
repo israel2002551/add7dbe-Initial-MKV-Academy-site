@@ -251,6 +251,37 @@ html.dark #mobile-nav {
   border-color: #334155;
 }
 
+html.dark input:not([type="file"]),
+html.dark textarea,
+html.dark select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  caret-color: #1d4ed8 !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.dark input:not([type="file"])::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b !important;
+  -webkit-text-fill-color: #64748b !important;
+  opacity: 1;
+}
+
+html.dark select option {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+}
+
+html.dark input[type="file"] {
+  color: #cbd5e1 !important;
+}
+
+html.dark input[type="file"]::file-selector-button {
+  color: #1d4ed8 !important;
+  background-color: #f0f7ff !important;
+}
+
 /* --------------------------------------------------------------------------
    Reduced Motion
    -------------------------------------------------------------------------- */
