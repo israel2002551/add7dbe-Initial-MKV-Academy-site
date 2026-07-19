@@ -75,6 +75,18 @@
         : "bg-red-50 text-red-700 border border-red-200");
   }
 
+  function friendlyAuthError(error) {
+    const message = error && error.message ? error.message : "Authentication failed.";
+    const lower = message.toLowerCase();
+    if (lower.includes("email not confirmed") || lower.includes("confirm")) {
+      return "Email not confirmed. Open the confirmation link sent to your email, or disable email confirmation in Supabase Authentication settings while testing.";
+    }
+    if (lower.includes("invalid login credentials")) {
+      return "Invalid email or password. Check the details and try again.";
+    }
+    return message;
+  }
+
   function openAuthPanel(mode) {
     const panel = document.getElementById("auth-panel");
     if (!panel) {
@@ -166,7 +178,7 @@
           password: formData.get("password"),
         });
         if (error) {
-          showAuthMessage(error.message, "error");
+          showAuthMessage(friendlyAuthError(error), "error");
           return;
         }
         showAuthMessage("Login successful. Opening your dashboard...", "success");
@@ -191,7 +203,7 @@
           options: { data: { full_name: fullName } },
         });
         if (error) {
-          showAuthMessage(error.message, "error");
+          showAuthMessage(friendlyAuthError(error), "error");
           return;
         }
         if (data.user) {
