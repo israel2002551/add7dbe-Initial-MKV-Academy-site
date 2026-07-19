@@ -29,8 +29,30 @@
 
   function publicUrl(bucket, path) {
     if (!window.MKV_SUPABASE || !window.MKV_SUPABASE.client || !bucket || !path) return "";
-    const { data } = window.MKV_SUPABASE.client.storage.from(bucket).getPublicUrl(path);
+    const cleanPath = normalizeStoragePath(bucket, path);
+    if (!cleanPath) return "";
+    if (/^https?:\/\//i.test(cleanPath)) return cleanPath;
+    const { data } = window.MKV_SUPABASE.client.storage.from(bucket).getPublicUrl(cleanPath);
     return data && data.publicUrl ? data.publicUrl : "";
+  }
+
+  function normalizeStoragePath(bucket, path) {
+    let cleanPath = String(path || "").trim();
+    if (!cleanPath) return "";
+    if (/^https?:\/\//i.test(cleanPath)) return cleanPath;
+    cleanPath = cleanPath.replace(/^\/+/, "");
+    const bucketPrefix = `${bucket}/`;
+    if (cleanPath.startsWith(bucketPrefix)) cleanPath = cleanPath.slice(bucketPrefix.length);
+    return cleanPath;
+  }
+
+  function videoType(src) {
+    const clean = String(src || "").split("?")[0].toLowerCase();
+    if (clean.endsWith(".mp4") || clean.endsWith(".m4v")) return "video/mp4";
+    if (clean.endsWith(".webm")) return "video/webm";
+    if (clean.endsWith(".ogg") || clean.endsWith(".ogv")) return "video/ogg";
+    if (clean.endsWith(".mov")) return "video/quicktime";
+    return "";
   }
 
   function escapeHtml(value) {
@@ -66,13 +88,18 @@
 
     return `
       <article class="mkv-card overflow-hidden">
-        <video class="w-full aspect-video bg-slate-900 object-cover" controls preload="metadata" ${poster ? `poster="${poster}"` : ""}>
-          <source src="${src}" />
+        <video class="w-full aspect-video bg-slate-900 object-cover" controls preload="metadata" playsinline ${poster ? `poster="${poster}"` : ""}>
+          <source src="${src}" ${videoType(src) ? `type="${videoType(src)}"` : ""} />
+          Your browser could not load this video.
         </video>
         <div class="p-5">
           <p class="font-technical text-xs uppercase tracking-widest text-brand-700">Welcome Video ${index + 1}</p>
           <h3 class="mt-2 font-bold text-slate-900">${escapeHtml(video.title)}</h3>
           <p class="mt-2 text-sm text-slate-500">${escapeHtml(video.description || "")}</p>
+          <a href="${src}" target="_blank" rel="noopener" class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-900">
+            Open video file
+            <svg class="w-4 h-4 icon-nudge" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+          </a>
         </div>
       </article>
     `;
