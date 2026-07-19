@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Chat | MKV Academy</title>
+  <meta name="description" content="Message MKV Academy instructors and support from your student account." />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 rx=%226%22 fill=%22%231d4ed8%22/></svg>" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              600: '#1d4ed8',
+              700: '#1d40b0',
+              900: '#1e3a8a',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/utilities.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased" data-requires-login>
+
+  <div id="loading-screen" aria-hidden="true"><div class="loader-mark">MKV</div></div>
+  <div id="scroll-progress"></div>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <div id="navbar"></div>
+
+  <main id="main-content">
+    <section id="login-gate" class="min-h-[70vh] flex items-center justify-center bg-gradient-to-br from-slate-900 via-brand-900 to-slate-900 text-white pt-20">
+      <div class="container-mkv max-w-lg text-center py-20">
+        <span class="inline-flex items-center space-x-2 bg-brand-600/20 text-brand-100 border border-brand-600/30 px-3.5 py-1.5 rounded-full text-sm font-medium">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Private Chat</span>
+        </span>
+        <h1 class="mt-6 text-3xl sm:text-4xl font-extrabold tracking-tight">Log in to message MKV Academy</h1>
+        <p class="mt-4 text-slate-300 leading-relaxed">Use your student account to ask questions about lessons, payments, assignments, or support.</p>
+        <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+          <button data-login-trigger class="inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-6 py-3.5 shadow-lg shadow-brand-600/25 transition-all">Log In</button>
+          <button data-signup-trigger class="inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl px-6 py-3.5 border border-white/10 transition-all">Create Account</button>
+        </div>
+
+        <div id="auth-panel" class="hidden mt-8 mkv-card bg-white text-left p-6">
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" data-auth-tab="login" class="bg-brand-600 text-white rounded-lg px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold">Log In</button>
+            <button type="button" data-auth-tab="signup" class="bg-slate-100 text-slate-600 rounded-lg px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold">Create Account</button>
+          </div>
+          <form data-auth-form="login" class="mt-5 space-y-4">
+            <input name="email" type="email" required placeholder="Email" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+            <input name="password" type="password" required placeholder="Password" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-3 transition-all">Log In</button>
+          </form>
+          <form data-auth-form="signup" class="hidden mt-5 space-y-4">
+            <input name="full_name" type="text" required placeholder="Full name" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+            <input name="email" type="email" required placeholder="Email" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+            <input name="password" type="password" required minlength="6" placeholder="Password" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-3 transition-all">Create Account</button>
+          </form>
+          <p data-auth-message class="hidden"></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="gated-content" class="hidden pt-32 pb-20 bg-white">
+      <div class="container-mkv">
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+          <div>
+            <p class="font-technical text-xs uppercase tracking-widest text-brand-700">Student Chat</p>
+            <h1 class="mt-3 text-4xl font-extrabold tracking-tight text-slate-900">Messages</h1>
+            <p class="mt-3 text-slate-600 max-w-2xl">Ask questions about your courses, assignments, payments, or dashboard access.</p>
+          </div>
+          <button id="new-chat-thread" type="button" class="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-3 shadow-lg shadow-brand-600/25 transition-all">New Conversation</button>
+        </div>
+
+        <div class="mt-10 grid lg:grid-cols-12 gap-6 min-h-[520px] lg:min-h-[620px]">
+          <aside class="lg:col-span-4 mkv-card p-4">
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="font-bold text-slate-900">Conversations</h2>
+              <span id="chat-role-label" class="font-technical text-xs text-slate-400"></span>
+            </div>
+            <div id="chat-thread-list" class="mt-4 space-y-2">
+              <p class="text-sm text-slate-400 py-4">Loading conversations...</p>
+            </div>
+          </aside>
+
+          <section class="lg:col-span-8 mkv-card flex flex-col min-h-[520px] lg:min-h-[620px]">
+            <div class="p-5 border-b border-slate-100">
+              <p id="chat-active-subject" class="font-bold text-slate-900">Select a conversation</p>
+              <p id="chat-active-meta" class="mt-1 text-xs text-slate-400"></p>
+            </div>
+
+            <div id="chat-messages" class="flex-1 p-5 space-y-4 overflow-y-auto bg-slate-50">
+              <div class="text-center text-sm text-slate-400 py-20">Choose a conversation or start a new one.</div>
+            </div>
+
+            <form id="chat-form" class="hidden p-5 border-t border-slate-100 bg-white">
+              <label class="block text-sm font-medium text-slate-700 mb-2">Message</label>
+              <div class="flex flex-col md:flex-row gap-3">
+                <textarea name="body" rows="2" required placeholder="Type your message..." class="flex-1 rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600"></textarea>
+                <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-6 py-3 transition-all">Send</button>
+              </div>
+              <p id="chat-message-status" class="mt-2 text-xs text-slate-400"></p>
+            </form>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="footer"></div>
+
+  <button id="back-to-top" aria-label="Back to top" class="h-11 w-11 rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-lg flex items-center justify-center transition-all">
+    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+  </button>
+
+  <script src="js/components.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/identity.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/animations.js"></script>
+  <script src="js/counters.js"></script>
+  <script src="js/darkmode.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

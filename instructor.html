@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Instructor Dashboard | MKV Academy</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 rx=%226%22 fill=%22%231d4ed8%22/></svg>" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: { brand: { 50: '#f0f7ff', 100: '#e0effe', 600: '#1d4ed8', 700: '#1d40b0', 900: '#1e3a8a' } }, fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'], mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'] } } }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/utilities.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased" data-requires-login>
+  <div id="loading-screen" aria-hidden="true"><div class="loader-mark">MKV</div></div>
+  <div id="scroll-progress"></div>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <div id="navbar"></div>
+
+  <main id="main-content">
+    <section id="login-gate" class="min-h-[70vh] flex items-center justify-center bg-gradient-to-br from-slate-900 via-brand-900 to-slate-900 text-white pt-20">
+      <div class="container-mkv max-w-lg text-center py-20">
+        <p class="font-technical text-xs uppercase tracking-widest text-cyan-300">Instructor Access</p>
+        <h1 class="mt-4 text-4xl font-extrabold tracking-tight">Log in as an instructor</h1>
+        <button data-login-trigger class="mt-8 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-6 py-3.5">Log In</button>
+        <div id="auth-panel" class="hidden mt-8 mkv-card bg-white text-left p-6">
+          <form data-auth-form="login" class="space-y-4">
+            <input name="email" type="email" required placeholder="Email" class="w-full rounded-lg border border-slate-200 px-4 py-3" />
+            <input name="password" type="password" required placeholder="Password" class="w-full rounded-lg border border-slate-200 px-4 py-3" />
+            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-3">Log In</button>
+          </form>
+          <p data-auth-message class="hidden"></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="gated-content" class="hidden pt-32 pb-20 bg-white">
+      <div class="container-mkv">
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+          <div>
+            <p class="font-technical text-xs uppercase tracking-widest text-brand-700">Instructor Dashboard</p>
+            <h1 class="mt-3 text-4xl font-extrabold tracking-tight text-slate-900">Teaching workspace</h1>
+            <p class="mt-3 text-slate-600 max-w-2xl">Manage assigned courses, review student work, and create quizzes.</p>
+          </div>
+          <div id="instructor-status" class="text-sm text-slate-500"></div>
+        </div>
+
+        <div id="instructor-denied" class="hidden mt-10 mkv-card p-8 text-center">
+          <h2 class="text-xl font-bold text-slate-900">Instructor role required</h2>
+          <p class="mt-2 text-slate-600">Ask the owner to set your profile role to instructor or assign you to a course.</p>
+        </div>
+
+        <div id="instructor-workspace" class="hidden mt-10 grid lg:grid-cols-5 gap-8">
+          <section class="lg:col-span-2 mkv-card p-6">
+            <h2 class="text-xl font-bold text-slate-900">Assigned Courses</h2>
+            <div id="instructor-course-list" class="mt-5 divide-y divide-slate-100"></div>
+          </section>
+
+          <section class="lg:col-span-3 mkv-card p-6">
+            <h2 class="text-xl font-bold text-slate-900">Create Quiz</h2>
+            <form id="instructor-quiz-form" class="mt-5 space-y-4">
+              <select name="course_id" id="instructor-course-select" required class="w-full rounded-lg border border-slate-200 px-4 py-3"></select>
+              <input name="title" required placeholder="Quiz title" class="w-full rounded-lg border border-slate-200 px-4 py-3" />
+              <input name="pass_mark" type="number" min="0" max="100" value="70" class="w-40 rounded-lg border border-slate-200 px-4 py-3" />
+              <textarea name="question" required rows="2" placeholder="First question" class="w-full rounded-lg border border-slate-200 px-4 py-3"></textarea>
+              <div class="grid md:grid-cols-2 gap-3">
+                <input name="option_a" required placeholder="Correct option" class="rounded-lg border border-slate-200 px-4 py-3" />
+                <input name="option_b" required placeholder="Wrong option" class="rounded-lg border border-slate-200 px-4 py-3" />
+              </div>
+              <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-6 py-3">Save Quiz</button>
+            </form>
+            <p id="instructor-message" class="hidden"></p>
+          </section>
+        </div>
+
+        <section id="instructor-submissions-panel" class="hidden mt-8 mkv-card p-6">
+          <h2 class="text-xl font-bold text-slate-900">Recent Student Submissions</h2>
+          <div id="instructor-submissions-list" class="mt-5 divide-y divide-slate-100"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div id="footer"></div>
+  <script src="js/components.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/identity.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/darkmode.js"></script>
+  <script src="js/instructor.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

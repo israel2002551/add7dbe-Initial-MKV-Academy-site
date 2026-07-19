@@ -1,0 +1,151 @@
+/* ==========================================================================
+   MKV Academy - Responsive Overrides
+   Tailwind handles the bulk of responsive behavior via utility breakpoints.
+   This file holds structural safeguards for small screens and touch devices.
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img,
+svg,
+video,
+canvas,
+iframe {
+  max-width: 100%;
+}
+
+video,
+iframe {
+  display: block;
+}
+
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
+}
+
+a,
+button,
+.mkv-card,
+.font-technical {
+  overflow-wrap: anywhere;
+}
+
+.mkv-card {
+  min-width: 0;
+}
+
+.container-mkv {
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #mobile-nav.open {
+    max-height: calc(100vh - 5rem);
+    overflow-y: auto;
+  }
+
+  .hero-cad-window {
+    max-width: 100%;
+  }
+
+  .hero-cad-window .flex,
+  .cad-window .flex {
+    min-width: 0;
+  }
+
+  input[type="file"]::file-selector-button {
+    max-width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
+  #cookie-banner .container-mkv,
+  #cookie-banner .flex {
+    align-items: stretch;
+  }
+
+  #cookie-banner button,
+  #cookie-banner a {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .container-mkv {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  section {
+    scroll-margin-top: 5rem;
+  }
+
+  .cad-canvas h1 {
+    font-size: 2.75rem;
+    line-height: 0.98;
+  }
+
+  .hero-cad-window {
+    transform: scale(0.92);
+    transform-origin: top center;
+  }
+
+  .mkv-card {
+    border-radius: 0.75rem;
+  }
+
+  #back-to-top {
+    right: 1rem;
+    bottom: 1rem;
+  }
+
+  #whatsapp-float {
+    left: 1rem;
+    bottom: 1rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .hero-cad-window {
+    max-width: 90%;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 360px) {
+  #site-navbar {
+    height: 4.5rem;
+  }
+
+  .cad-canvas h1 {
+    font-size: 2.35rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (hover: none) {
+  .mkv-card:hover {
+    transform: none;
+  }
+}

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Studio | MKV Academy</title>
+  <meta name="description" content="MKV Academy admin studio for courses, lesson videos, and assignments." />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 rx=%226%22 fill=%22%231d4ed8%22/></svg>" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              600: '#1d4ed8',
+              700: '#1d40b0',
+              900: '#1e3a8a',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/utilities.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased" data-requires-login>
+
+  <div id="loading-screen" aria-hidden="true"><div class="loader-mark">MKV</div></div>
+  <div id="scroll-progress"></div>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <div id="navbar"></div>
+
+  <main id="main-content">
+    <section id="login-gate" class="min-h-[70vh] flex items-center justify-center bg-gradient-to-br from-slate-900 via-brand-900 to-slate-900 text-white pt-20">
+      <div class="container-mkv max-w-lg text-center py-20">
+        <span class="inline-flex items-center space-x-2 bg-brand-600/20 text-brand-100 border border-brand-600/30 px-3.5 py-1.5 rounded-full text-sm font-medium">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Admin Access</span>
+        </span>
+        <h1 class="mt-6 text-3xl sm:text-4xl font-extrabold tracking-tight">Owner and admin login</h1>
+        <p class="mt-4 text-slate-300 leading-relaxed">Log in with an account whose profile role is admin or owner to upload course lessons and assignments.</p>
+        <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+          <button data-login-trigger class="inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-6 py-3.5 shadow-lg shadow-brand-600/25 transition-all">Log In</button>
+        </div>
+        <div id="auth-panel" class="hidden mt-8 mkv-card bg-white text-left p-6">
+          <form data-auth-form="login" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+              <input name="email" type="email" required class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+              <input name="password" type="password" required class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+            </div>
+            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-3 transition-all">Log In</button>
+          </form>
+          <p data-auth-message class="hidden"></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="gated-content" class="hidden pt-32 pb-20 bg-white">
+      <div class="container-mkv">
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+          <div>
+            <p class="font-technical text-xs uppercase tracking-widest text-brand-700">Admin Studio</p>
+            <h1 class="mt-3 text-4xl font-extrabold tracking-tight text-slate-900">Course content manager</h1>
+            <p class="mt-3 text-slate-600 max-w-2xl">Upload private lesson videos and assignments to Supabase Storage, then save the lesson details to the database for paid students.</p>
+          </div>
+          <div id="admin-status" class="text-sm text-slate-500"></div>
+        </div>
+
+        <div id="admin-denied" class="hidden mt-10 mkv-card p-8 text-center">
+          <h2 class="text-xl font-bold text-slate-900">Admin role required</h2>
+          <p class="mt-2 text-slate-600">Your account is logged in, but it is not marked as admin or owner in the profiles table.</p>
+        </div>
+
+        <div id="admin-workspace" class="hidden mt-10 grid lg:grid-cols-5 gap-8">
+          <section class="lg:col-span-5 mkv-card p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <h2 class="text-xl font-bold text-slate-900">Analytics</h2>
+              <button id="admin-refresh-analytics" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Refresh</button>
+            </div>
+            <div id="admin-analytics-grid" class="mt-5 grid sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+          </section>
+
+          <section class="lg:col-span-2 mkv-card p-6">
+            <h2 class="text-xl font-bold text-slate-900">Create Course</h2>
+            <form id="admin-course-form" class="mt-5 space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Course Title</label>
+                <input name="title" required placeholder="SolidWorks Beginner to CSWA" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Course ID</label>
+                <input name="id" placeholder="custom-course-id-optional" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
+                <textarea name="description" rows="4" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600"></textarea>
+              </div>
+              <div class="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1.5">Price</label>
+                  <input name="price" type="number" min="0" step="100" value="0" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1.5">Currency</label>
+                  <input name="currency" value="NGN" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+                </div>
+              </div>
+              <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-3 transition-all">Save Course</button>
+            </form>
+          </section>
+
+          <section class="lg:col-span-3 mkv-card p-6">
+            <h2 class="text-xl font-bold text-slate-900">Upload Lesson</h2>
+            <form id="admin-lesson-form" class="mt-5 space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Course</label>
+                <select name="course_id" id="admin-course-select" required class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600"></select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Lesson Title</label>
+                <input name="title" required placeholder="Lecture 1: Introduction" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
+                <textarea name="description" rows="3" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600"></textarea>
+              </div>
+              <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1.5">Video Provider</label>
+                  <select name="video_provider" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600">
+                    <option value="storage">Supabase Storage</option>
+                    <option value="bunny">Bunny Stream</option>
+                    <option value="cloudflare">Cloudflare Stream</option>
+                    <option value="mux">Mux</option>
+                    <option value="youtube">YouTube</option>
+                    <option value="external">External URL</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1.5">Stream / Embed URL</label>
+                  <input name="stream_embed_url" type="url" placeholder="https://..." class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1.5">Video File</label>
+                  <input name="video" type="file" accept="video/*" class="w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-brand-700 file:font-semibold" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1.5">Assignment File</label>
+                  <input name="assignment" type="file" class="w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-slate-700 file:font-semibold" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Sort Order</label>
+                <input name="sort_order" type="number" min="0" value="1" class="w-full sm:w-32 rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+              </div>
+              <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-6 py-3 shadow-lg shadow-brand-600/25 transition-all">Upload Lesson</button>
+            </form>
+            <p id="admin-message" class="hidden"></p>
+          </section>
+        </div>
+
+        <section id="admin-lessons-panel" class="hidden mt-8 mkv-card p-6">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h2 class="text-xl font-bold text-slate-900">Recent Lessons</h2>
+            <button id="admin-refresh" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Refresh</button>
+          </div>
+          <div id="admin-lessons-list" class="mt-5 divide-y divide-slate-100"></div>
+        </section>
+
+        <section id="admin-landing-videos-panel" class="hidden mt-8 mkv-card p-6">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Landing Welcome Videos</h2>
+              <p class="mt-1 text-sm text-slate-500">Upload up to four public welcome videos shown on the homepage before login.</p>
+            </div>
+            <button id="admin-refresh-landing-videos" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Refresh</button>
+          </div>
+
+          <form id="admin-landing-video-form" class="mt-5 grid lg:grid-cols-4 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1.5">Title</label>
+              <input name="title" required placeholder="Welcome to MKV Academy" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
+              <input name="description" placeholder="Short hook for visitors" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1.5">Slot</label>
+              <select name="sort_order" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600">
+                <option value="1">Video 1</option>
+                <option value="2">Video 2</option>
+                <option value="3">Video 3</option>
+                <option value="4">Video 4</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1.5">Video File</label>
+              <input name="video" type="file" accept="video/*" required class="w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-brand-700 file:font-semibold" />
+            </div>
+            <div class="lg:col-span-4 flex flex-col lg:flex-row lg:items-end gap-4">
+              <div class="flex-1">
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Poster Image</label>
+                <input name="poster" type="file" accept="image/*" class="w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-slate-700 file:font-semibold" />
+              </div>
+              <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-6 py-3 shadow-lg shadow-brand-600/25 transition-all">Upload Welcome Video</button>
+            </div>
+          </form>
+
+          <div id="admin-landing-videos-list" class="mt-5 divide-y divide-slate-100"></div>
+        </section>
+
+        <section id="admin-coupons-panel" class="hidden mt-8 mkv-card p-6">
+          <h2 class="text-xl font-bold text-slate-900">Coupons</h2>
+          <form id="admin-coupon-form" class="mt-5 grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <input name="code" required placeholder="WELCOME20" class="rounded-lg border border-slate-200 px-4 py-3" />
+            <select name="discount_type" class="rounded-lg border border-slate-200 px-4 py-3">
+              <option value="percent">Percent</option>
+              <option value="fixed">Fixed</option>
+            </select>
+            <input name="discount_value" type="number" min="0" required placeholder="20" class="rounded-lg border border-slate-200 px-4 py-3" />
+            <input name="max_redemptions" type="number" min="1" placeholder="Max uses" class="rounded-lg border border-slate-200 px-4 py-3" />
+            <button class="bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-3">Save Coupon</button>
+          </form>
+          <div id="admin-coupons-list" class="mt-5 divide-y divide-slate-100"></div>
+        </section>
+
+        <section id="admin-students-panel" class="hidden mt-8 mkv-card p-6">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Student Manager</h2>
+              <p class="mt-1 text-sm text-slate-500">Search students, grant access, or revoke course access manually.</p>
+            </div>
+            <input id="admin-student-search" type="search" placeholder="Search name or email" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600 lg:w-80" />
+          </div>
+          <div class="mt-5 grid lg:grid-cols-3 gap-5">
+            <div class="lg:col-span-1 border border-slate-100 rounded-lg overflow-hidden">
+              <div id="admin-students-list" class="divide-y divide-slate-100 max-h-96 overflow-y-auto"></div>
+            </div>
+            <div class="lg:col-span-2">
+              <div id="admin-student-detail" class="rounded-lg border border-slate-100 p-5 text-sm text-slate-400">Select a student to manage access.</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="admin-instructors-panel" class="hidden mt-8 mkv-card p-6">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Instructor Manager</h2>
+              <p class="mt-1 text-sm text-slate-500">Promote users to instructor and assign the courses they can manage.</p>
+            </div>
+            <input id="admin-instructor-search" type="search" placeholder="Search name or email" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600 lg:w-80" />
+          </div>
+          <div class="mt-5 grid lg:grid-cols-3 gap-5">
+            <div class="lg:col-span-1 border border-slate-100 rounded-lg overflow-hidden">
+              <div id="admin-instructors-list" class="divide-y divide-slate-100 max-h-96 overflow-y-auto"></div>
+            </div>
+            <div class="lg:col-span-2">
+              <div id="admin-instructor-detail" class="rounded-lg border border-slate-100 p-5 text-sm text-slate-400">Select a user to manage instructor access.</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="admin-submissions-panel" class="hidden mt-8 mkv-card p-6">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Assignment Reviews</h2>
+              <p class="mt-1 text-sm text-slate-500">Review submitted assignments, add grades, and notify students.</p>
+            </div>
+            <button id="admin-refresh-submissions" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Refresh</button>
+          </div>
+          <div id="admin-submissions-list" class="mt-5 divide-y divide-slate-100"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div id="footer"></div>
+
+  <button id="back-to-top" aria-label="Back to top" class="h-11 w-11 rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-lg flex items-center justify-center transition-all">
+    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+  </button>
+
+  <script src="js/components.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/identity.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/animations.js"></script>
+  <script src="js/counters.js"></script>
+  <script src="js/darkmode.js"></script>
+  <script src="js/admin.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

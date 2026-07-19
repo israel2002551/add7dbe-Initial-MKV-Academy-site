@@ -1,0 +1,216 @@
+[
+  {
+    "id": "solidworks-beginner-cswa",
+    "title": "SolidWorks: Beginner to CSWA",
+    "category": "SOLIDWORKS",
+    "level": "Beginner",
+    "duration": "6 Weeks",
+    "badge": "Popular",
+    "cardStyle": "brand",
+    "icon": "cube",
+    "description": "Learn fundamental 3D parametric modeling and master your first official certification.",
+    "highlights": [
+      "Sketch Relations & Master Parametrics",
+      "Bottom-up Assemblies & Drawings",
+      "Live CSWA Prep & Practice Exam Mockups"
+    ],
+    "paymentLink": "https://flutterwave.com/pay/hwtqgnslu4bd",
+    "lectures": [
+      {
+        "title": "Lecture 1 - Introduction to the Learning Path",
+        "description": "A focused overview of the tools, workflow, and outcomes for this course.",
+        "videoUrl": "https://youtu.be/Npfhle4WdWw"
+      },
+      {
+        "title": "Lecture 2 - Core Modeling Workflow",
+        "description": "Build the first practical model while learning clean sketch and feature habits.",
+        "videoUrl": ""
+      },
+      {
+        "title": "Lecture 3 - Practice Task and Review",
+        "description": "Apply the workflow to a guided task and review common mistakes.",
+        "videoUrl": ""
+      }
+    ]
+  },
+  {
+    "id": "advanced-part-assembly-design",
+    "title": "Advanced Part & Assembly Design",
+    "category": "Advanced SOLIDWORKS",
+    "level": "Intermediate",
+    "duration": "8 Weeks",
+    "badge": "",
+    "cardStyle": "dark",
+    "icon": "cog",
+    "description": "Level up to multi-body master-modeling, structural weldments, and complex sheet metal.",
+    "highlights": [
+      "Multi-body Master-Model Workflows",
+      "Weldments & Sheet Metal Engineering",
+      "Preparation for CSWP Specialist Levels"
+    ],
+    "paymentLink": "https://flutterwave.com/pay/heqechxtiofy",
+    "lectures": []
+  },
+  {
+    "id": "fea-simulation-mechanics",
+    "title": "FEA Simulation & Mechanics",
+    "category": "Engineering Simulation",
+    "level": "Advanced",
+    "duration": "4 Weeks",
+    "badge": "",
+    "cardStyle": "slate",
+    "icon": "chart",
+    "description": "Validate your designs. Run stress analysis, fatigue, and structural optimization simulations.",
+    "highlights": [
+      "Static Linear Stress Analysis (FEA)",
+      "Mesh Convergence & Refinement Strategies",
+      "Real-world Fatigue & Factor-of-Safety Reports"
+    ],
+    "paymentLink": "",
+    "lectures": []
+  },
+  {
+    "id": "autocad-fundamentals",
+    "title": "AutoCAD Fundamentals",
+    "category": "AutoCAD",
+    "level": "Beginner",
+    "duration": "5 Weeks",
+    "badge": "",
+    "cardStyle": "brand",
+    "icon": "ruler",
+    "description": "Build precise 2D technical drawings and layer standards used on real production floors.",
+    "highlights": [
+      "Layers, Blocks & Dimensioning Standards",
+      "Technical Drafting Conventions",
+      "Title Blocks & Sheet Sets"
+    ],
+    "paymentLink": "",
+    "lectures": []
+  },
+  {
+    "id": "design-for-manufacturing",
+    "title": "Design for Manufacturing (DFM)",
+    "category": "Design for Manufacturing",
+    "level": "Intermediate",
+    "duration": "6 Weeks",
+    "badge": "",
+    "cardStyle": "dark",
+    "icon": "factory",
+    "description": "Design parts that survive contact with the manufacturing floor - first time, every time.",
+    "highlights": [
+      "Tolerance Stacks & GD&T Basics",
+      "Injection Molding & Sheet Metal DFM Rules",
+      "Cost-driven Design Decisions"
+    ],
+    "paymentLink": "",
+    "lectures": []
+  },
+  {
+    "id": "manufacturing-drawings",
+    "title": "Manufacturing Drawings & GD&T",
+    "category": "Manufacturing Drawings",
+    "level": "Intermediate",
+    "duration": "4 Weeks",
+    "badge": "",
+    "cardStyle": "slate",
+    "icon": "document",
+    "description": "Produce drawings a machinist can pick up and build from without a single phone call.",
+    "highlights": [
+      "Dimensioning & Tolerancing Standards",
+      "Section, Detail & Assembly Views",
+      "Revision Control Practices"
+    ],
+    "paymentLink": "",
+    "lectures": []
+  },
+  {
+    "id": "product-design-fundamentals",
+    "title": "Product Design Fundamentals",
+    "category": "Product Design",
+    "level": "Beginner",
+    "duration": "6 Weeks",
+    "badge": "",
+    "cardStyle": "brand",
+    "icon": "lightbulb",
+    "description": "Move from concept sketch to a manufacturable product with a repeatable design process.",
+    "highlights": [
+      "Concept Development & Iteration",
+      "Materials & Process Selection",
+      "Prototyping Workflows"
+    ],
+    "paymentLink": "",
+    "lectures": []
+  },
+  {
+    "id": "mechanical-design-projects",
+    "title": "Mechanical Design: Real Projects",
+    "category": "Mechanical Design",
+    "level": "Advanced",
+    "duration": "10 Weeks",
+    "badge": "New",
+    "cardStyle": "dark",
+    "icon": "gear",
+    "description": "Apply everything to a capstone mechanical assembly, reviewed like a real engineering project.",
+    "highlights": [
+      "End-to-end Assembly Ownership",
+      "Design Reviews with Working Engineers",
+      "Portfolio-ready Final Deliverable"
+    ],
+    "paymentLink": "",
+    "lectures": []
+  },
+  {
+    "id": "embedded-systems-intro",
+    "title": "Embedded Systems Foundations",
+    "category": "Embedded Systems",
+    "level": "Beginner",
+    "duration": "7 Weeks",
+    "badge": "",
+    "cardStyle": "slate",
+    "icon": "chip",
+    "description": "Bridge mechanical and electrical engineering with practical embedded fundamentals.",
+    "highlights": [
+      "Microcontroller Basics & Circuits",
+      "Sensors, Actuators & Signal Flow",
+      "Mechatronic Integration Projects"
+    ],
+    "paymentLink": "",
+    "lectures": []
+  },
+  {
+    "id": "cad-best-practices",
+    "title": "CAD Best Practices & Standards",
+    "category": "CAD Best Practices",
+    "level": "All Levels",
+    "duration": "3 Weeks",
+    "badge": "",
+    "cardStyle": "brand",
+    "icon": "check",
+    "description": "The workflow discipline that keeps feature trees clean and models from breaking.",
+    "highlights": [
+      "Feature Tree Hygiene",
+      "Parametric Modeling Standards",
+      "File & Revision Management"
+    ],
+    "paymentLink": "",
+    "lectures": []
+  },
+  {
+    "id": "engineering-capstone-projects",
+    "title": "Engineering Projects Studio",
+    "category": "Engineering Projects",
+    "level": "Advanced",
+    "duration": "12 Weeks",
+    "badge": "",
+    "cardStyle": "dark",
+    "icon": "rocket",
+    "description": "A guided studio where you take one product from brief to manufacturing-ready package.",
+    "highlights": [
+      "Full Product Development Lifecycle",
+      "Cross-discipline Team Collaboration",
+      "Final Client-style Presentation"
+    ],
+    "paymentLink": "",
+    "lectures": []
+  }
+]

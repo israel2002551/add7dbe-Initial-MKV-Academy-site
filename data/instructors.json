@@ -1,0 +1,34 @@
+[
+  {
+    "id": "joseph-celestine-donald",
+    "name": "Joseph-Celestine Donald",
+    "role": "Co-Founder & Lead Instructor, Marine Engineering",
+    "bio": "One of the youngest recognized experts in his field, Joseph leads MKV Academy's core CAD and simulation curriculum, drawing on years of hands-on parametric modeling, workflow troubleshooting, and mentorship.",
+    "specialties": ["SOLIDWORKS", "Parametric Modeling", "Engineering Mentorship"],
+    "image": "assets/images/instructor-joseph.jpg"
+  },
+  {
+    "id": "diamond",
+    "name": "Diamond",
+    "role": "Co-Founder & Lead Instructor, Electrical Engineering",
+    "bio": "Diamond brings an electrical engineering lens to MKV's embedded systems and mechatronics tracks, helping students bridge mechanical design with real electrical constraints.",
+    "specialties": ["Embedded Systems", "Circuit Design", "Mechatronics"],
+    "image": "assets/images/instructor-diamond.jpg"
+  },
+  {
+    "id": "simulation-fea-specialist",
+    "name": "Simulation Studio Lead",
+    "role": "Simulation & FEA Specialist",
+    "bio": "Leads simulation review sessions focused on stress analysis, mesh quality, design validation, and turning analysis results into practical engineering decisions.",
+    "specialties": ["FEA", "Simulation", "Design Validation"],
+    "image": "assets/images/instructor-simulation-studio.jpg"
+  },
+  {
+    "id": "manufacturing-dfm-specialist",
+    "name": "Manufacturing Studio Lead",
+    "role": "Manufacturing & DFM Specialist",
+    "bio": "Guides students through manufacturable design, production drawings, tolerance decisions, and the communication standards expected by workshops and suppliers.",
+    "specialties": ["DFM", "GD&T", "Manufacturing Drawings"],
+    "image": "assets/images/instructor-manufacturing-studio.jpg"
+  }
+]

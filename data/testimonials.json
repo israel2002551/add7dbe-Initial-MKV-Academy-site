@@ -1,0 +1,34 @@
+[
+  {
+    "id": "testimonial-1",
+    "name": "CAD Bootcamp Graduate",
+    "role": "SolidWorks: Beginner to CSWA",
+    "quote": "The program made parametric modeling feel structured. I now build parts with cleaner sketches, stronger feature trees, and more confidence preparing for certification.",
+    "image": "assets/images/testimonial-1.jpg",
+    "rating": 5
+  },
+  {
+    "id": "testimonial-2",
+    "name": "Mechanical Design Learner",
+    "role": "Advanced Part & Assembly Design",
+    "quote": "The advanced assembly sessions helped me understand how professional CAD files are organized, reviewed, and prepared for real production work.",
+    "image": "assets/images/testimonial-2.jpg",
+    "rating": 5
+  },
+  {
+    "id": "testimonial-3",
+    "name": "Simulation Track Student",
+    "role": "FEA Simulation & Mechanics",
+    "quote": "The mentor feedback was direct and practical. I learned how to explain assumptions, inspect mesh quality, and make better design decisions from simulation results.",
+    "image": "assets/images/testimonial-3.jpg",
+    "rating": 5
+  },
+  {
+    "id": "testimonial-4",
+    "name": "Engineering Team Lead",
+    "role": "Corporate Training Client",
+    "quote": "The training gave our team a clearer modeling standard and a more reliable way to review CAD files before they move into manufacturing discussions.",
+    "image": "assets/images/testimonial-4.jpg",
+    "rating": 5
+  }
+]

@@ -1,0 +1,8 @@
+[
+  { "id": "partner-1", "name": "Partner Company 1", "logo": "assets/logos/partner-1.svg" },
+  { "id": "partner-2", "name": "Partner Company 2", "logo": "assets/logos/partner-2.svg" },
+  { "id": "partner-3", "name": "Partner Company 3", "logo": "assets/logos/partner-3.svg" },
+  { "id": "partner-4", "name": "Partner Company 4", "logo": "assets/logos/partner-4.svg" },
+  { "id": "partner-5", "name": "Partner Company 5", "logo": "assets/logos/partner-5.svg" },
+  { "id": "partner-6", "name": "Partner Company 6", "logo": "assets/logos/partner-6.svg" }
+]
