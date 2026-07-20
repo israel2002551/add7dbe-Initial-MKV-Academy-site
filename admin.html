@@ -145,6 +145,10 @@
                 <input name="title" required placeholder="Lecture 1: Introduction" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
               </div>
               <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Chapter</label>
+                <input name="chapter_title" placeholder="Chapter 1: Foundations" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+              </div>
+              <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
                 <textarea name="description" rows="3" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600"></textarea>
               </div>
@@ -177,7 +181,9 @@
                 <label class="block text-sm font-medium text-slate-700 mb-1.5">Sort Order</label>
                 <input name="sort_order" type="number" min="0" value="1" class="w-full sm:w-32 rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
               </div>
-              <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-6 py-3 shadow-lg shadow-brand-600/25 transition-all">Upload Lesson</button>
+            <input type="hidden" name="lesson_id" />
+            <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-6 py-3 shadow-lg shadow-brand-600/25 transition-all">Save Lesson</button>
+            <button type="button" id="admin-lesson-cancel-edit" class="hidden ml-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl px-6 py-3 transition-all">Cancel Edit</button>
             </form>
             <p id="admin-message" class="hidden"></p>
           </section>
@@ -289,7 +295,7 @@
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h2 class="text-xl font-bold text-slate-900">Assignment Reviews</h2>
-              <p class="mt-1 text-sm text-slate-500">Review submitted assignments, add grades, and notify students.</p>
+              <p class="mt-1 text-sm text-slate-500">Review assignment and project review submissions, add grades, and notify students.</p>
             </div>
             <button id="admin-refresh-submissions" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Refresh</button>
           </div>

@@ -22,11 +22,21 @@
   function displayName(user) {
     if (!user) return "";
     return (
+      (user.profile && user.profile.username) ||
       (user.profile && user.profile.full_name) ||
       (user.user_metadata && user.user_metadata.full_name) ||
       user.email ||
       "Student"
     );
+  }
+
+  function generateUsername(fullName, email) {
+    const base = String(fullName || (email || "").split("@")[0] || "student")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "")
+      .slice(0, 14) || "student";
+    return `${base}${Math.floor(1000 + Math.random() * 9000)}`;
   }
 
   function updateAuthUI(user) {
@@ -41,6 +51,10 @@
     document.querySelectorAll("[data-auth-instructor]").forEach((el) => {
       const role = user && user.profile && user.profile.role;
       el.classList.toggle("hidden", !(role === "instructor" || role === "admin" || role === "owner"));
+    });
+    document.querySelectorAll("[data-auth-student]").forEach((el) => {
+      const role = user && user.profile && user.profile.role;
+      el.classList.toggle("hidden", role !== "student");
     });
     document.querySelectorAll("[data-auth-name]").forEach((el) => {
       if (user) el.textContent = displayName(user);
@@ -197,10 +211,11 @@
         const fullName = formData.get("full_name");
         const email = formData.get("email");
         const password = formData.get("password");
+        const username = generateUsername(fullName, email);
         const { data, error } = await window.MKV_SUPABASE.client.auth.signUp({
           email,
           password,
-          options: { data: { full_name: fullName } },
+          options: { data: { full_name: fullName, username } },
         });
         if (error) {
           showAuthMessage(friendlyAuthError(error), "error");
@@ -211,6 +226,7 @@
             id: data.user.id,
             email,
             full_name: fullName,
+            username,
             role: "student",
           });
         }
@@ -223,6 +239,7 @@
   function initAuth() {
     bindTriggers();
     bindForms();
+    initPasswordToggles();
     refreshUser();
 
     if (window.MKV_SUPABASE && window.MKV_SUPABASE.client) {
@@ -233,6 +250,29 @@
     if (banner && (!window.MKV_SUPABASE || !window.MKV_SUPABASE.isConfigured) && isLocalPreview()) {
       banner.classList.remove("hidden");
     }
+  }
+
+  function initPasswordToggles() {
+    document.querySelectorAll('input[type="password"]').forEach((input) => {
+      if (input.closest(".password-toggle-wrap")) return;
+      const wrap = document.createElement("div");
+      wrap.className = "password-toggle-wrap relative";
+      input.parentNode.insertBefore(wrap, input);
+      wrap.appendChild(input);
+      input.classList.add("pr-12");
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "password-toggle-btn absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-brand-700";
+      button.setAttribute("aria-label", "Show password");
+      button.innerHTML = '<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12 18 18.75 12 18.75 2.25 12 2.25 12z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>';
+      button.addEventListener("click", () => {
+        const showing = input.type === "text";
+        input.type = showing ? "password" : "text";
+        button.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+      });
+      wrap.appendChild(button);
+    });
   }
 
   document.addEventListener("DOMContentLoaded", () => setTimeout(initAuth, 0));

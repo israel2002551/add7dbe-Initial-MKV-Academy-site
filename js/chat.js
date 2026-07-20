@@ -14,6 +14,11 @@
     return role === "admin" || role === "owner";
   }
 
+  function isStaff(user) {
+    const role = user && user.profile && user.profile.role;
+    return role === "admin" || role === "owner" || role === "instructor";
+  }
+
   function canUseSupabase() {
     return window.MKV_SUPABASE && window.MKV_SUPABASE.isConfigured && window.MKV_SUPABASE.client;
   }
@@ -49,8 +54,8 @@
   }
 
   function threadTitle(thread) {
-    if (isAdmin(window.MKV_CURRENT_USER)) {
-      return `${thread.subject} - ${thread.student_id.slice(0, 8)}`;
+    if (isStaff(window.MKV_CURRENT_USER)) {
+      return `${thread.subject} - ${thread.student_username || thread.student_id.slice(0, 8)}`;
     }
     return thread.subject;
   }
@@ -99,17 +104,36 @@
       .select("id, student_id, subject, status, created_at, updated_at")
       .order("updated_at", { ascending: false });
 
-    const { data, error } = isAdmin(user) ? await query : await query.eq("student_id", user.id);
+    const { data, error } = isStaff(user) ? await query.neq("status", "closed") : await query.eq("student_id", user.id).neq("status", "closed");
 
     if (error) {
       renderEmptyThreads(error.message);
       return;
     }
 
-    threadsCache = data || [];
+    threadsCache = await hydrateThreadStudents(data || []);
     if (!activeThreadId && threadsCache.length) activeThreadId = threadsCache[0].id;
     renderThreads();
     if (activeThreadId) await loadMessages(activeThreadId);
+  }
+
+  async function hydrateThreadStudents(threads) {
+    const ids = [...new Set(threads.map((thread) => thread.student_id).filter(Boolean))];
+    if (!ids.length) return threads;
+    const { data } = await window.MKV_SUPABASE.client.from("profiles").select("id, username, full_name").in("id", ids);
+    const profileMap = new Map((data || []).map((profile) => [profile.id, profile]));
+    return threads.map((thread) => {
+      const profile = profileMap.get(thread.student_id);
+      return { ...thread, student_username: profile?.username || profile?.full_name || "" };
+    });
+  }
+
+  async function hydrateMessageSenders(messages) {
+    const ids = [...new Set(messages.map((message) => message.sender_id).filter(Boolean))];
+    if (!ids.length) return messages;
+    const { data } = await window.MKV_SUPABASE.client.from("profiles").select("id, username, full_name, role").in("id", ids);
+    const profileMap = new Map((data || []).map((profile) => [profile.id, profile]));
+    return messages.map((message) => ({ ...message, sender_profile: profileMap.get(message.sender_id) }));
   }
 
   function renderMessages(messages) {
@@ -127,11 +151,12 @@
         const mine = message.sender_id === user.id;
         const bubbleClass = mine ? "bg-brand-600 text-white ml-auto" : "bg-white text-slate-700 border border-slate-100";
         const metaClass = mine ? "text-brand-100" : "text-slate-400";
+        const senderName = message.sender_profile?.username || message.sender_profile?.full_name || (mine ? "You" : "MKV Support");
         return `
           <div class="max-w-[82%] ${mine ? "ml-auto text-right" : ""}">
             <div class="inline-block rounded-xl px-4 py-3 ${bubbleClass}">
               <p class="text-sm leading-relaxed whitespace-pre-wrap">${escapeHtml(message.body)}</p>
-              <p class="mt-2 text-[11px] ${metaClass}">${formatDate(message.created_at)}</p>
+              <p class="mt-2 text-[11px] ${metaClass}">${escapeHtml(senderName)} - ${formatDate(message.created_at)}</p>
             </div>
           </div>
         `;
@@ -166,7 +191,7 @@
       return;
     }
 
-    renderMessages(data || []);
+    renderMessages(await hydrateMessageSenders(data || []));
   }
 
   async function selectThread(threadId) {
@@ -199,10 +224,10 @@
       return;
     }
 
-    const subject = window.prompt("Conversation subject", "Course question");
+    const subject = window.prompt("Subject (required)", "Course question");
     if (!subject) return;
 
-    const studentId = isAdmin(user)
+    const studentId = isStaff(user)
       ? window.prompt("Student user ID for this conversation")
       : user.id;
     if (!studentId) return;
@@ -258,11 +283,34 @@
     });
   }
 
+  function bindArchiveButton() {
+    const btn = document.getElementById("archive-chat-thread");
+    if (!btn) return;
+    btn.addEventListener("click", async () => {
+      const user = window.MKV_CURRENT_USER;
+      if (!activeThreadId || !isStaff(user) || !canUseSupabase()) return;
+      const { error } = await window.MKV_SUPABASE.client
+        .from("chat_threads")
+        .update({ status: "closed", updated_at: new Date().toISOString() })
+        .eq("id", activeThreadId);
+      if (error) {
+        window.alert(error.message);
+        return;
+      }
+      activeThreadId = null;
+      await loadThreads();
+      const wrap = document.getElementById("chat-messages");
+      if (wrap) wrap.innerHTML = `<div class="text-center text-sm text-slate-400 py-20">Conversation archived.</div>`;
+    });
+  }
+
   function initChat() {
     if (!document.getElementById("chat-thread-list")) return;
     const user = window.MKV_CURRENT_USER;
     const role = document.getElementById("chat-role-label");
-    if (role && user) role.textContent = isAdmin(user) ? "Admin inbox" : "Student inbox";
+    if (role && user) role.textContent = isStaff(user) ? "Support inbox" : "Student inbox";
+    const archive = document.getElementById("archive-chat-thread");
+    archive && archive.classList.toggle("hidden", !isStaff(user));
 
     if (refreshTimer) clearInterval(refreshTimer);
     if (!user) return;
@@ -277,6 +325,7 @@
   document.addEventListener("mkv:auth-updated", initChat);
   document.addEventListener("DOMContentLoaded", () => {
     bindChatForm();
+    bindArchiveButton();
     const newBtn = document.getElementById("new-chat-thread");
     newBtn && newBtn.addEventListener("click", createThread);
     setTimeout(initChat, 0);

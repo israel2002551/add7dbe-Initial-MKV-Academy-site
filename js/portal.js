@@ -264,7 +264,7 @@
 
     document.querySelectorAll("[data-open-external-video]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        window.open(btn.getAttribute("data-url"), "_blank", "noopener");
+        openVideoPlayer(btn.getAttribute("data-url"), btn.closest("[data-lesson-row]")?.querySelector("h4")?.textContent || "Lesson video", true);
       });
     });
 
@@ -283,7 +283,7 @@
           window.alert(error.message);
           return;
         }
-        window.open(data.signedUrl, "_blank", "noopener");
+        openVideoPlayer(data.signedUrl, btn.closest("[data-lesson-row]")?.querySelector("h4")?.textContent || "Lesson video", false);
       });
     });
 
@@ -312,6 +312,29 @@
         await submitAssignment(form, courses);
       });
     });
+  }
+
+  function openVideoPlayer(url, title, embed) {
+    const viewer = document.getElementById("student-video-viewer");
+    const frame = document.getElementById("student-video-frame");
+    const titleEl = document.getElementById("student-video-title");
+    if (!viewer || !frame) {
+      window.open(url, "_blank", "noopener");
+      return;
+    }
+    titleEl.textContent = title || "Lesson video";
+    frame.innerHTML = embed
+      ? `<iframe src="${url}" title="${titleEl.textContent}" class="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe>`
+      : `<video src="${url}" controls playsinline class="h-full w-full bg-slate-950"></video>`;
+    viewer.classList.remove("hidden");
+    viewer.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function closeVideoPlayer() {
+    const viewer = document.getElementById("student-video-viewer");
+    const frame = document.getElementById("student-video-frame");
+    if (frame) frame.innerHTML = "";
+    if (viewer) viewer.classList.add("hidden");
   }
 
   async function submitAssignment(form, courses) {
@@ -354,6 +377,52 @@
 
     await loadSubmissionStatus(user.id);
     renderCourses(courses);
+  }
+
+  async function submitProjectReview(form) {
+    const status = document.getElementById("project-review-status");
+    const user = window.MKV_CURRENT_USER;
+    if (!user || !window.MKV_SUPABASE || !window.MKV_SUPABASE.isConfigured) {
+      if (status) status.textContent = "Project review upload works after Supabase is configured.";
+      return;
+    }
+
+    const formData = new FormData(form);
+    const image = formData.get("image");
+    const cad = formData.get("cad");
+    if (!image?.size || !cad?.size) return;
+
+    if (status) status.textContent = "Uploading review files...";
+    const basePath = `${user.id}/project-reviews/${Date.now()}`;
+    const imagePath = await uploadReviewFile(basePath, image);
+    const cadPath = await uploadReviewFile(basePath, cad);
+
+    const { error } = await window.MKV_SUPABASE.client.from("project_review_submissions").insert({
+      user_id: user.id,
+      subject: formData.get("subject"),
+      note: formData.get("note") || "",
+      image_bucket: "project-review-submissions",
+      image_path: imagePath,
+      cad_bucket: "project-review-submissions",
+      cad_path: cadPath,
+    });
+    if (error) {
+      if (status) status.textContent = error.message;
+      return;
+    }
+    form.reset();
+    if (status) status.textContent = "Project submitted. A mentor will review it from the admin dashboard.";
+  }
+
+  async function uploadReviewFile(basePath, file) {
+    const extension = file.name.includes(".") ? file.name.split(".").pop() : "bin";
+    const cleanName = window.MKV_SUPABASE.slugify(file.name.replace(/\.[^.]+$/, ""));
+    const path = `${basePath}/${cleanName}.${extension}`;
+    const { error } = await window.MKV_SUPABASE.client.storage
+      .from("project-review-submissions")
+      .upload(path, file, { cacheControl: "3600", upsert: false });
+    if (error) throw error;
+    return path;
   }
 
   async function loadNotifications() {
@@ -450,8 +519,30 @@
       .eq("user_id", user.id)
       .order("issued_at", { ascending: false });
     wrap.innerHTML = data && data.length
-      ? data.map((c) => `<p class="py-1"><span class="font-semibold">${c.course_id}</span><br><span class="font-technical text-xs">${c.certificate_code}</span></p>`).join("")
+      ? data.map((c) => `<div class="py-2"><p><span class="font-semibold">${c.course_id}</span><br><span class="font-technical text-xs">${c.certificate_code}</span></p><button type="button" data-certificate-code="${c.certificate_code}" data-certificate-course="${c.course_id}" data-certificate-date="${c.issued_at}" class="mt-2 text-xs font-semibold text-brand-700 hover:text-brand-900">View certificate</button></div>`).join("")
       : "Complete all lessons in a certificate-enabled course to unlock a certificate.";
+    wrap.querySelectorAll("[data-certificate-code]").forEach((btn) => {
+      btn.addEventListener("click", () => openCertificate(btn));
+    });
+  }
+
+  function openCertificate(btn) {
+    const user = window.MKV_CURRENT_USER || {};
+    const name = user.profile?.full_name || user.user_metadata?.full_name || user.email || "MKV Academy Student";
+    const course = btn.getAttribute("data-certificate-course");
+    const code = btn.getAttribute("data-certificate-code");
+    const issued = new Date(btn.getAttribute("data-certificate-date")).toLocaleDateString();
+    const win = window.open("", "_blank", "noopener");
+    if (!win) return;
+    win.document.write(`
+      <html><head><title>MKV Certificate ${code}</title><style>
+      body{font-family:Inter,Arial,sans-serif;margin:0;background:#f8fafc;color:#0f172a}
+      .cert{max-width:900px;margin:40px auto;background:white;border:12px solid #1d4ed8;padding:56px;text-align:center;box-shadow:0 20px 50px rgba(15,23,42,.12)}
+      .mark{font-weight:800;letter-spacing:.12em;color:#1d4ed8}.name{font-size:42px;font-weight:800;margin:28px 0 10px}.course{font-size:24px;font-weight:700}.meta{margin-top:36px;color:#475569;font-size:14px}
+      @media print{body{background:white}.cert{box-shadow:none;margin:0;max-width:none;min-height:80vh}}
+      </style></head><body><main class="cert"><p class="mark">MKV ACADEMY</p><h1>Certificate of Completion</h1><p>This certifies that</p><p class="name">${name}</p><p>has completed</p><p class="course">${course}</p><p class="meta">Issued ${issued} - Certificate Code: ${code}</p></main></body></html>
+    `);
+    win.document.close();
   }
 
   async function loadReferrals() {
@@ -546,6 +637,20 @@
       await window.MKV_SUPABASE.client.from("referrals").insert({ referrer_id: user.id, referred_email: email });
       form.reset();
       loadReferrals();
+    });
+  }
+
+  function bindProjectReviewForm() {
+    const form = document.getElementById("project-review-form");
+    if (!form) return;
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await submitProjectReview(form);
+      } catch (error) {
+        const status = document.getElementById("project-review-status");
+        if (status) status.textContent = error.message;
+      }
     });
   }
 
@@ -670,6 +775,8 @@
   document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => {
       bindReferralForm();
+      bindProjectReviewForm();
+      document.getElementById("student-video-back")?.addEventListener("click", closeVideoPlayer);
       initMyCourses();
       initStudyTimer();
     }, 0);

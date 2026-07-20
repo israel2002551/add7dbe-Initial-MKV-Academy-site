@@ -84,9 +84,10 @@
 
     const { data, error } = await window.MKV_SUPABASE.client
       .from("lessons")
-      .select("title, course_id, video_provider, video_path, stream_embed_url, assignment_path, created_at")
-      .order("created_at", { ascending: false })
-      .limit(8);
+      .select("id, title, course_id, chapter_title, description, video_provider, video_path, stream_embed_url, assignment_path, sort_order, created_at")
+      .order("course_id", { ascending: true })
+      .order("chapter_title", { ascending: true })
+      .order("sort_order", { ascending: true });
 
     if (error) {
       list.innerHTML = `<p class="py-4 text-sm text-red-600">${error.message}</p>`;
@@ -94,23 +95,84 @@
     }
 
     list.innerHTML = (data || []).length
-      ? data
-          .map(
-            (lesson) => `
-        <div class="py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-          <div>
-            <p class="font-semibold text-slate-900">${lesson.title}</p>
-            <p class="text-xs text-slate-400">${lesson.course_id}</p>
-          </div>
-          <div class="flex flex-wrap gap-2 text-xs">
-            ${lesson.video_path ? `<span class="bg-brand-50 text-brand-700 px-2.5 py-1 rounded-full">video saved</span>` : ""}
-            ${lesson.stream_embed_url ? `<span class="bg-cyan-50 text-cyan-700 px-2.5 py-1 rounded-full">${lesson.video_provider} stream</span>` : ""}
-            ${lesson.assignment_path ? `<span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">assignment saved</span>` : ""}
-          </div>
-        </div>`
-          )
-          .join("")
+      ? groupedLessonMarkup(data || [])
       : `<p class="py-4 text-sm text-slate-400">No lessons uploaded yet.</p>`;
+
+    list.querySelectorAll("[data-edit-lesson]").forEach((btn) => {
+      btn.addEventListener("click", () => startLessonEdit((data || []).find((lesson) => lesson.id === btn.getAttribute("data-edit-lesson"))));
+    });
+    list.querySelectorAll("[data-delete-lesson]").forEach((btn) => {
+      btn.addEventListener("click", async () => deleteLesson(btn.getAttribute("data-delete-lesson")));
+    });
+  }
+
+  function groupedLessonMarkup(lessons) {
+    const courses = new Map();
+    lessons.forEach((lesson) => {
+      const course = adminCourses.find((item) => item.id === lesson.course_id);
+      const courseTitle = course ? course.title : lesson.course_id;
+      const chapter = lesson.chapter_title || "General";
+      if (!courses.has(courseTitle)) courses.set(courseTitle, new Map());
+      const chapters = courses.get(courseTitle);
+      if (!chapters.has(chapter)) chapters.set(chapter, []);
+      chapters.get(chapter).push(lesson);
+    });
+
+    return [...courses.entries()].map(([courseTitle, chapters]) => `
+      <div class="py-5">
+        <h3 class="font-bold text-slate-900">${escapeHtml(courseTitle)}</h3>
+        <div class="mt-3 space-y-3">
+          ${[...chapters.entries()].map(([chapter, rows]) => `
+            <div class="rounded-lg border border-slate-100 bg-slate-50 p-4">
+              <p class="text-xs font-technical uppercase text-slate-400">${escapeHtml(chapter)}</p>
+              <div class="mt-2 divide-y divide-slate-200">
+                ${rows.map((lesson) => `
+                  <div class="py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                      <p class="font-semibold text-slate-900">${escapeHtml(lesson.title)}</p>
+                      <p class="text-xs text-slate-400">Order ${lesson.sort_order || 0}</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 text-xs">
+                      ${lesson.video_path ? `<span class="bg-brand-50 text-brand-700 px-2.5 py-1 rounded-full">video saved</span>` : ""}
+                      ${lesson.stream_embed_url ? `<span class="bg-cyan-50 text-cyan-700 px-2.5 py-1 rounded-full">${escapeHtml(lesson.video_provider)} stream</span>` : ""}
+                      ${lesson.assignment_path ? `<span class="bg-white text-slate-600 px-2.5 py-1 rounded-full">assignment saved</span>` : ""}
+                      <button type="button" data-edit-lesson="${lesson.id}" class="bg-white hover:bg-slate-100 text-slate-700 font-semibold rounded-lg px-3 py-2">Edit</button>
+                      <button type="button" data-delete-lesson="${lesson.id}" class="bg-red-50 hover:bg-red-100 text-red-700 font-semibold rounded-lg px-3 py-2">Delete</button>
+                    </div>
+                  </div>
+                `).join("")}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `).join("");
+  }
+
+  function startLessonEdit(lesson) {
+    const form = document.getElementById("admin-lesson-form");
+    if (!form || !lesson) return;
+    form.elements.lesson_id.value = lesson.id;
+    form.elements.course_id.value = lesson.course_id;
+    form.elements.title.value = lesson.title || "";
+    form.elements.chapter_title.value = lesson.chapter_title || "";
+    form.elements.description.value = lesson.description || "";
+    form.elements.video_provider.value = lesson.video_provider || "storage";
+    form.elements.stream_embed_url.value = lesson.stream_embed_url || "";
+    form.elements.sort_order.value = lesson.sort_order || 0;
+    document.getElementById("admin-lesson-cancel-edit")?.classList.remove("hidden");
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function deleteLesson(lessonId) {
+    if (!lessonId || !window.confirm("Delete this lesson from the course overview?")) return;
+    const { error } = await window.MKV_SUPABASE.client.from("lessons").delete().eq("id", lessonId);
+    if (error) {
+      setMessage(error.message, "error");
+      return;
+    }
+    setMessage("Lesson deleted.", "success");
+    await loadLessons();
   }
 
   async function loadLandingVideos() {
@@ -199,8 +261,34 @@
       return;
     }
     list.innerHTML = (data || []).length
-      ? data.map((c) => `<div class="py-4 flex items-center justify-between gap-4"><div><p class="font-semibold text-slate-900">${c.code}</p><p class="text-xs text-slate-400">${c.discount_value} ${c.discount_type} - ${c.redeemed_count}/${c.max_redemptions || "unlimited"}</p></div><span class="text-xs font-technical ${c.is_active ? "text-emerald-600" : "text-slate-400"}">${c.is_active ? "active" : "inactive"}</span></div>`).join("")
+      ? data.map((c) => `<div class="py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4"><div><p class="font-semibold text-slate-900">${escapeHtml(c.code)}</p><p class="text-xs text-slate-400">${c.discount_value} ${c.discount_type} - ${c.redeemed_count}/${c.max_redemptions || "unlimited"}</p></div><div class="flex flex-wrap items-center gap-2"><span class="text-xs font-technical ${c.is_active ? "text-emerald-600" : "text-slate-400"}">${c.is_active ? "active" : "inactive"}</span><button type="button" data-edit-coupon="${c.id}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg px-3 py-2">Edit</button><button type="button" data-toggle-coupon="${c.id}" data-active="${c.is_active}" class="bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold rounded-lg px-3 py-2">${c.is_active ? "Deactivate" : "Activate"}</button><button type="button" data-delete-coupon="${c.id}" class="bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg px-3 py-2">Delete</button></div></div>`).join("")
       : `<p class="py-4 text-sm text-slate-400">No coupons yet.</p>`;
+    list.querySelectorAll("[data-edit-coupon]").forEach((btn) => {
+      btn.addEventListener("click", () => startCouponEdit((data || []).find((coupon) => coupon.id === btn.getAttribute("data-edit-coupon"))));
+    });
+    list.querySelectorAll("[data-toggle-coupon]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        await window.MKV_SUPABASE.client.from("coupons").update({ is_active: btn.getAttribute("data-active") !== "true" }).eq("id", btn.getAttribute("data-toggle-coupon"));
+        await loadCoupons();
+      });
+    });
+    list.querySelectorAll("[data-delete-coupon]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!window.confirm("Delete this coupon?")) return;
+        await window.MKV_SUPABASE.client.from("coupons").delete().eq("id", btn.getAttribute("data-delete-coupon"));
+        await loadCoupons();
+      });
+    });
+  }
+
+  function startCouponEdit(coupon) {
+    const form = document.getElementById("admin-coupon-form");
+    if (!form || !coupon) return;
+    form.elements.code.value = coupon.code || "";
+    form.elements.discount_type.value = coupon.discount_type || "percent";
+    form.elements.discount_value.value = coupon.discount_value || 0;
+    form.elements.max_redemptions.value = coupon.max_redemptions || "";
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   async function uploadFile(bucket, courseId, file) {
@@ -267,9 +355,11 @@
         const assignmentPath =
           assignment && assignment.size ? await uploadFile("course-assignments", courseId, assignment) : "";
 
-        const { error } = await window.MKV_SUPABASE.client.from("lessons").insert({
+        const lessonId = formData.get("lesson_id");
+        const payload = {
           course_id: courseId,
           title: formData.get("title"),
+          chapter_title: formData.get("chapter_title") || "General",
           description: formData.get("description"),
           video_provider: videoProvider,
           video_bucket: "course-videos",
@@ -280,11 +370,19 @@
           assignment_path: assignmentPath,
           sort_order: Number(formData.get("sort_order") || 0),
           created_by: user && user.id,
-        });
+        };
+        if (lessonId) {
+          if (!videoPath) delete payload.video_path;
+          if (!assignmentPath) delete payload.assignment_path;
+        }
+        const { error } = lessonId
+          ? await window.MKV_SUPABASE.client.from("lessons").update(payload).eq("id", lessonId)
+          : await window.MKV_SUPABASE.client.from("lessons").insert(payload);
         if (error) throw error;
 
-        setMessage("Lesson uploaded and saved.", "success");
+        setMessage(lessonId ? "Lesson updated." : "Lesson uploaded and saved.", "success");
         form.reset();
+        document.getElementById("admin-lesson-cancel-edit")?.classList.add("hidden");
         await loadLessons();
       } catch (error) {
         setMessage(error.message, "error");
@@ -680,6 +778,7 @@
     list.innerHTML = (data || []).length
       ? data.map(submissionMarkup).join("")
       : `<p class="py-4 text-sm text-slate-400">No submissions yet.</p>`;
+    await appendProjectReviews(list);
 
     list.querySelectorAll("[data-download-submission]").forEach((btn) => {
       btn.addEventListener("click", async () => {
@@ -717,6 +816,67 @@
           return;
         }
         await createNotification(userId, "Assignment reviewed", "Your assignment has been reviewed. Open your dashboard to see feedback.", "students.html");
+        await loadSubmissions();
+      });
+    });
+  }
+
+  async function appendProjectReviews(list) {
+    const { data, error } = await window.MKV_SUPABASE.client
+      .from("project_review_submissions")
+      .select("id, user_id, subject, note, image_bucket, image_path, cad_bucket, cad_path, status, feedback, created_at")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (error) return;
+    if (!data || !data.length) return;
+    list.insertAdjacentHTML("beforeend", `
+      <div class="pt-6">
+        <h3 class="font-bold text-slate-900">Project Reviews</h3>
+        <div class="mt-3 divide-y divide-slate-100">
+          ${data.map((item) => `
+            <article class="py-5">
+              <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                <div>
+                  <p class="font-semibold text-slate-900">${escapeHtml(item.subject)}</p>
+                  <p class="mt-1 text-xs text-slate-400">${item.user_id} - ${item.status}</p>
+                  ${item.note ? `<p class="mt-2 text-sm text-slate-600">${escapeHtml(item.note)}</p>` : ""}
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <button type="button" data-download-submission data-bucket="${item.image_bucket}" data-path="${item.image_path}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Image</button>
+                  <button type="button" data-download-submission data-bucket="${item.cad_bucket}" data-path="${item.cad_path}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">CAD</button>
+                </div>
+              </div>
+              <form data-project-review-form="${item.id}" data-user-id="${item.user_id}" class="mt-4 grid md:grid-cols-3 gap-3">
+                <select name="status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                  ${["submitted", "reviewed", "needs_revision", "approved"].map((status) => `<option value="${status}" ${item.status === status ? "selected" : ""}>${status}</option>`).join("")}
+                </select>
+                <input name="feedback" value="${escapeHtml(item.feedback || "")}" placeholder="Feedback" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg px-4 py-2">Save Review</button>
+              </form>
+            </article>
+          `).join("")}
+        </div>
+      </div>
+    `);
+    list.querySelectorAll("[data-project-review-form]").forEach((form) => {
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+        const userId = form.getAttribute("data-user-id");
+        const { error: reviewError } = await window.MKV_SUPABASE.client
+          .from("project_review_submissions")
+          .update({
+            status: formData.get("status"),
+            feedback: formData.get("feedback"),
+            reviewed_by: window.MKV_CURRENT_USER && window.MKV_CURRENT_USER.id,
+            reviewed_at: new Date().toISOString(),
+          })
+          .eq("id", form.getAttribute("data-project-review-form"));
+        if (reviewError) {
+          window.alert(reviewError.message);
+          return;
+        }
+        await createNotification(userId, "Project review updated", "Your project review has feedback from MKV Academy.", "students.html#project-review");
         await loadSubmissions();
       });
     });
@@ -798,6 +958,11 @@
     studentSearch && studentSearch.addEventListener("input", () => loadStudents());
     const instructorSearch = document.getElementById("admin-instructor-search");
     instructorSearch && instructorSearch.addEventListener("input", () => loadInstructorUsers());
+    const cancelLessonEdit = document.getElementById("admin-lesson-cancel-edit");
+    cancelLessonEdit && cancelLessonEdit.addEventListener("click", () => {
+      document.getElementById("admin-lesson-form")?.reset();
+      cancelLessonEdit.classList.add("hidden");
+    });
     setTimeout(initAdmin, 0);
   });
 })();

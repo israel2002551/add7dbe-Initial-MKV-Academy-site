@@ -66,10 +66,27 @@
     });
   }
 
+  function initExternalLinks() {
+    const cfg = window.MKV_SUPABASE_CONFIG || {};
+    const whatsappUrl = cfg.WHATSAPP_URL || "https://wa.link/qnw9ai";
+    document.querySelectorAll("#whatsapp-float, [data-whatsapp-link]").forEach((link) => {
+      link.setAttribute("href", whatsappUrl);
+      link.setAttribute("target", "_blank");
+      link.setAttribute("rel", "noopener");
+    });
+    document.querySelectorAll("[data-mentor-hours-link]").forEach((link) => {
+      link.setAttribute("href", cfg.MENTOR_HOURS_URL || "https://zoom.us/");
+    });
+    document.querySelectorAll("[data-project-review-link]").forEach((link) => {
+      link.setAttribute("href", cfg.PROJECT_REVIEW_URL || "students.html#project-review");
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     initLoadingScreen();
     initScrollProgress();
     initBackToTop();
     initCookieBanner();
+    initExternalLinks();
   });
 })();

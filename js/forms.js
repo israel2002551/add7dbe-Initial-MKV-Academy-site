@@ -6,6 +6,10 @@
    ========================================================================== */
 
 (function () {
+  const cfg = window.MKV_SUPABASE_CONFIG || {};
+  const COMPANY_EMAIL = cfg.COMPANY_EMAIL || "mkvconsultingofficial@gmail.com";
+  const WHATSAPP_URL = cfg.WHATSAPP_URL || "https://wa.link/qnw9ai";
+
   function showFormMessage(container, message, type) {
     let msgEl = container.querySelector("[data-form-message]");
     if (!msgEl) {
@@ -61,6 +65,35 @@
     return valid;
   }
 
+  function buildWhatsAppMessage(form) {
+    const formData = new FormData(form);
+    const lines = ["Hello MKV Academy, I just submitted this message:"];
+    formData.forEach((value, key) => {
+      if (String(value || "").trim()) lines.push(`${key}: ${value}`);
+    });
+    return `${WHATSAPP_URL}?text=${encodeURIComponent(lines.join("\n"))}`;
+  }
+
+  async function saveLead(form) {
+    if (!window.MKV_SUPABASE || !window.MKV_SUPABASE.isConfigured) return;
+    const formData = new FormData(form);
+    const payload = {
+      source: form.getAttribute("data-form-source") || (form.querySelector("textarea") ? "contact" : "newsletter"),
+      name: formData.get("name") || "",
+      email: formData.get("email") || "",
+      reason: formData.get("reason") || "",
+      message: formData.get("message") || "",
+      notify_email: COMPANY_EMAIL,
+    };
+    const { data, error } = await window.MKV_SUPABASE.client.from("lead_submissions").insert(payload).select("id").single();
+    if (error) throw error;
+    if (data?.id) {
+      await window.MKV_SUPABASE.client.functions.invoke("send-lead-notification", {
+        body: { lead_id: data.id },
+      });
+    }
+  }
+
   function initForm(form) {
     form.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -73,14 +106,21 @@
         submitBtn.textContent = "Sending...";
       }
 
-      setTimeout(() => {
-        showFormMessage(form, "Thanks - your message has been received. Our team will be in touch shortly.", "success");
+      saveLead(form)
+        .catch((error) => {
+          console.warn("Lead capture failed:", error);
+        })
+        .finally(() => {
+        showFormMessage(form, `Thanks - your details were captured. You can also reach us at ${COMPANY_EMAIL}.`, "success");
+        if (form.querySelector("textarea")) {
+          window.location.href = buildWhatsAppMessage(form);
+        }
         form.reset();
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = originalLabel;
         }
-      }, 900);
+      });
     });
 
     form.querySelectorAll("input, textarea, select").forEach((field) => {

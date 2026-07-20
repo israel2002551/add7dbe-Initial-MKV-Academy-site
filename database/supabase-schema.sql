@@ -5,10 +5,14 @@
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text,
+  username text unique,
   email text,
   role text not null default 'student' check (role in ('student', 'instructor', 'admin', 'owner')),
   created_at timestamptz not null default now()
 );
+
+alter table public.profiles add column if not exists username text;
+create unique index if not exists profiles_username_unique_idx on public.profiles(username);
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -17,10 +21,11 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, full_name, email, role)
+  insert into public.profiles (id, full_name, username, email, role)
   values (
     new.id,
     new.raw_user_meta_data ->> 'full_name',
+    coalesce(new.raw_user_meta_data ->> 'username', 'student' || substr(replace(new.id::text, '-', ''), 1, 8)),
     new.email,
     case
       when lower(new.email) in ('israelefe093@gmail.com', 'josephcelestinediamond@gmail.com') then 'admin'
@@ -58,6 +63,7 @@ create table if not exists public.lessons (
   id uuid primary key default gen_random_uuid(),
   course_id text not null references public.courses(id) on delete cascade,
   title text not null,
+  chapter_title text not null default 'General',
   description text,
   video_provider text not null default 'storage' check (video_provider in ('storage', 'bunny', 'cloudflare', 'mux', 'youtube', 'external')),
   video_bucket text default 'course-videos',
@@ -71,6 +77,8 @@ create table if not exists public.lessons (
   created_by uuid references auth.users(id),
   created_at timestamptz not null default now()
 );
+
+alter table public.lessons add column if not exists chapter_title text not null default 'General';
 
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
@@ -135,6 +143,33 @@ create table if not exists public.assignment_submissions (
   feedback text,
   reviewed_by uuid references auth.users(id),
   reviewed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.project_review_submissions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  subject text not null,
+  note text,
+  image_bucket text not null default 'project-review-submissions',
+  image_path text not null,
+  cad_bucket text not null default 'project-review-submissions',
+  cad_path text not null,
+  status text not null default 'submitted' check (status in ('submitted', 'reviewed', 'needs_revision', 'approved')),
+  feedback text,
+  reviewed_by uuid references auth.users(id),
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.lead_submissions (
+  id uuid primary key default gen_random_uuid(),
+  source text not null default 'contact',
+  name text,
+  email text not null,
+  reason text,
+  message text,
+  notify_email text not null default 'mkvconsultingofficial@gmail.com',
   created_at timestamptz not null default now()
 );
 
@@ -263,6 +298,8 @@ alter table public.lesson_progress enable row level security;
 alter table public.chat_threads enable row level security;
 alter table public.chat_messages enable row level security;
 alter table public.assignment_submissions enable row level security;
+alter table public.project_review_submissions enable row level security;
+alter table public.lead_submissions enable row level security;
 alter table public.notifications enable row level security;
 alter table public.landing_videos enable row level security;
 alter table public.course_instructors enable row level security;
@@ -288,6 +325,18 @@ as $$
 $$;
 
 create or replace function public.is_instructor()
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role in ('instructor', 'admin', 'owner')
+  );
+$$;
+
+create or replace function public.is_staff()
 returns boolean
 language sql
 security definer
@@ -376,13 +425,8 @@ declare
   v_done integer;
   v_certificate_id uuid;
 begin
-  if not exists (
-    select 1 from public.quizzes
-    join public.enrollments on enrollments.course_id = quizzes.course_id
-    where quizzes.id = p_quiz_id
-      and enrollments.user_id = auth.uid()
-  ) then
-    raise exception 'Quiz access denied';
+  if p_user_id <> auth.uid() and not public.is_admin() then
+    raise exception 'Certificate access denied';
   end if;
 
   select count(*) into v_total
@@ -492,6 +536,57 @@ begin
 end;
 $$;
 
+drop policy if exists "Students can read own profile" on public.profiles;
+drop policy if exists "Students can insert own profile" on public.profiles;
+drop policy if exists "Students can update own profile" on public.profiles;
+drop policy if exists "Admins manage profiles" on public.profiles;
+drop policy if exists "Anyone can read active courses" on public.courses;
+drop policy if exists "Admins manage courses" on public.courses;
+drop policy if exists "Instructors read assigned courses" on public.course_instructors;
+drop policy if exists "Admins manage instructor assignments" on public.course_instructors;
+drop policy if exists "Enrolled students read lessons" on public.lessons;
+drop policy if exists "Admins manage lessons" on public.lessons;
+drop policy if exists "Assigned instructors manage lessons" on public.lessons;
+drop policy if exists "Students read own orders" on public.orders;
+drop policy if exists "Admins manage orders" on public.orders;
+drop policy if exists "Students read own enrollments" on public.enrollments;
+drop policy if exists "Admins manage enrollments" on public.enrollments;
+drop policy if exists "Students manage own progress" on public.lesson_progress;
+drop policy if exists "Students read own chat threads" on public.chat_threads;
+drop policy if exists "Students create own chat threads" on public.chat_threads;
+drop policy if exists "Admins create chat threads" on public.chat_threads;
+drop policy if exists "Students update own chat threads" on public.chat_threads;
+drop policy if exists "Admins update chat threads" on public.chat_threads;
+drop policy if exists "Chat participants read messages" on public.chat_messages;
+drop policy if exists "Chat participants send messages" on public.chat_messages;
+drop policy if exists "Students read own submissions" on public.assignment_submissions;
+drop policy if exists "Students submit own assignments" on public.assignment_submissions;
+drop policy if exists "Admins review submissions" on public.assignment_submissions;
+drop policy if exists "Students read own project reviews" on public.project_review_submissions;
+drop policy if exists "Students submit own project reviews" on public.project_review_submissions;
+drop policy if exists "Staff review project submissions" on public.project_review_submissions;
+drop policy if exists "Anyone can submit leads" on public.lead_submissions;
+drop policy if exists "Admins read leads" on public.lead_submissions;
+drop policy if exists "Students read own notifications" on public.notifications;
+drop policy if exists "Students mark own notifications" on public.notifications;
+drop policy if exists "Admins manage notifications" on public.notifications;
+drop policy if exists "Students manage own referrals" on public.referrals;
+drop policy if exists "Anyone can read active coupons" on public.coupons;
+drop policy if exists "Admins manage coupons" on public.coupons;
+drop policy if exists "Admins read payment events" on public.payment_events;
+drop policy if exists "Enrolled students read quizzes" on public.quizzes;
+drop policy if exists "Instructors manage quizzes" on public.quizzes;
+drop policy if exists "Students read quiz questions" on public.quiz_questions;
+drop policy if exists "Instructors manage quiz questions" on public.quiz_questions;
+drop policy if exists "Instructors read quiz options" on public.quiz_options;
+drop policy if exists "Instructors manage quiz options" on public.quiz_options;
+drop policy if exists "Students read own quiz attempts" on public.quiz_attempts;
+drop policy if exists "Students create own quiz attempts" on public.quiz_attempts;
+drop policy if exists "Students read own certificates" on public.certificates;
+drop policy if exists "Admins manage certificates" on public.certificates;
+drop policy if exists "Anyone can read active landing videos" on public.landing_videos;
+drop policy if exists "Admins manage landing videos" on public.landing_videos;
+
 create policy "Students can read own profile"
 on public.profiles for select
 using (id = auth.uid() or public.is_admin());
@@ -588,7 +683,7 @@ with check (user_id = auth.uid());
 
 create policy "Students read own chat threads"
 on public.chat_threads for select
-using (student_id = auth.uid() or public.is_admin());
+using (student_id = auth.uid() or public.is_staff());
 
 create policy "Students create own chat threads"
 on public.chat_threads for insert
@@ -596,7 +691,7 @@ with check (student_id = auth.uid());
 
 create policy "Admins create chat threads"
 on public.chat_threads for insert
-with check (public.is_admin());
+with check (public.is_staff());
 
 create policy "Students update own chat threads"
 on public.chat_threads for update
@@ -605,13 +700,13 @@ with check (student_id = auth.uid());
 
 create policy "Admins update chat threads"
 on public.chat_threads for update
-using (public.is_admin())
-with check (public.is_admin());
+using (public.is_staff())
+with check (public.is_staff());
 
 create policy "Chat participants read messages"
 on public.chat_messages for select
 using (
-  public.is_admin()
+  public.is_staff()
   or exists (
     select 1 from public.chat_threads
     where chat_threads.id = chat_messages.thread_id
@@ -624,7 +719,7 @@ on public.chat_messages for insert
 with check (
   sender_id = auth.uid()
   and (
-    public.is_admin()
+    public.is_staff()
     or exists (
       select 1 from public.chat_threads
       where chat_threads.id = chat_messages.thread_id
@@ -635,7 +730,7 @@ with check (
 
 create policy "Students read own submissions"
 on public.assignment_submissions for select
-using (user_id = auth.uid() or public.is_admin());
+using (user_id = auth.uid() or public.is_staff());
 
 create policy "Students submit own assignments"
 on public.assignment_submissions for insert
@@ -650,8 +745,29 @@ with check (
 
 create policy "Admins review submissions"
 on public.assignment_submissions for update
-using (public.is_admin())
-with check (public.is_admin());
+using (public.is_staff())
+with check (public.is_staff());
+
+create policy "Students read own project reviews"
+on public.project_review_submissions for select
+using (user_id = auth.uid() or public.is_staff());
+
+create policy "Students submit own project reviews"
+on public.project_review_submissions for insert
+with check (user_id = auth.uid());
+
+create policy "Staff review project submissions"
+on public.project_review_submissions for update
+using (public.is_staff())
+with check (public.is_staff());
+
+create policy "Anyone can submit leads"
+on public.lead_submissions for insert
+with check (true);
+
+create policy "Admins read leads"
+on public.lead_submissions for select
+using (public.is_admin());
 
 create policy "Students read own notifications"
 on public.notifications for select
@@ -760,8 +876,21 @@ values
   ('course-assignments', 'course-assignments', false),
   ('course-materials', 'course-materials', false),
   ('assignment-submissions', 'assignment-submissions', false),
+  ('project-review-submissions', 'project-review-submissions', false),
   ('welcome-videos', 'welcome-videos', true)
 on conflict (id) do nothing;
+
+drop policy if exists "Admins upload course videos" on storage.objects;
+drop policy if exists "Admins update course files" on storage.objects;
+drop policy if exists "Admins delete course files" on storage.objects;
+drop policy if exists "Admins upload welcome videos" on storage.objects;
+drop policy if exists "Admins update welcome videos" on storage.objects;
+drop policy if exists "Admins delete welcome videos" on storage.objects;
+drop policy if exists "Anyone can read welcome videos" on storage.objects;
+drop policy if exists "Students upload own submissions" on storage.objects;
+drop policy if exists "Students read own submissions files" on storage.objects;
+drop policy if exists "Enrolled students read paid videos" on storage.objects;
+drop policy if exists "Enrolled students read paid assignments" on storage.objects;
 
 create policy "Admins upload course videos"
 on storage.objects for insert
@@ -796,16 +925,16 @@ using (bucket_id = 'welcome-videos');
 create policy "Students upload own submissions"
 on storage.objects for insert
 with check (
-  bucket_id = 'assignment-submissions'
+  bucket_id in ('assignment-submissions', 'project-review-submissions')
   and auth.uid()::text = (storage.foldername(name))[1]
 );
 
 create policy "Students read own submissions files"
 on storage.objects for select
 using (
-  bucket_id = 'assignment-submissions'
+  bucket_id in ('assignment-submissions', 'project-review-submissions')
   and (
-    public.is_admin()
+    public.is_staff()
     or auth.uid()::text = (storage.foldername(name))[1]
   )
 );

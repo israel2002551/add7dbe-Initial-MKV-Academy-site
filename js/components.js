@@ -45,8 +45,6 @@ const MKV_FOOTER_COLUMNS = [
       { label: "Community", href: "community.html" },
       { label: "Student Portal", href: "students.html" },
       { label: "Student Chat", href: "chat.html" },
-      { label: "Instructor Dashboard", href: "instructor.html" },
-      { label: "Admin Studio", href: "admin.html" },
       { label: "FAQ", href: "faq.html" },
       { label: "Contact Us", href: "contact.html" },
     ],
@@ -141,7 +139,7 @@ function mkvRenderNavbar() {
 
           <a href="contact.html"
              class="group inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-2.5 shadow-lg shadow-brand-600/25 hover:shadow-xl transition-all">
-            Apply Now
+            Talk to Someone
             <svg class="w-4 h-4 icon-nudge" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
@@ -184,7 +182,7 @@ function mkvRenderNavbar() {
           </div>
 
           <a href="contact.html" class="block mt-2 text-center bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-3 shadow-lg shadow-brand-600/25 transition-all">
-            Apply Now
+            Talk to Someone
           </a>
         </nav>
       </div>
@@ -231,6 +229,12 @@ function mkvRenderFooter() {
             <a href="contact.html" class="hover:text-white transition-colors" aria-label="Contact MKV Academy">Contact</a>
             <a href="community.html" class="hover:text-white transition-colors" aria-label="Visit the MKV Academy community">Community</a>
             <a href="courses.html" class="hover:text-white transition-colors" aria-label="View MKV Academy courses">Courses</a>
+            <a href="https://www.linkedin.com/company/mkv-series/" target="_blank" rel="noopener" class="hover:text-white transition-colors" aria-label="MKV Consulting on LinkedIn">
+              <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.32 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.1 20.45H3.54V9H7.1v11.45z"/></svg>
+            </a>
+            <a href="https://www.youtube.com/@MKVCONSULTING" target="_blank" rel="noopener" class="hover:text-white transition-colors" aria-label="MKV Consulting on YouTube">
+              <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.13C19.54 3.57 12 3.57 12 3.57s-7.54 0-9.4.5A3 3 0 0 0 .5 6.2 31.25 31.25 0 0 0 0 12a31.25 31.25 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.13c1.86.5 9.4.5 9.4.5s7.54 0 9.4-.5a3 3 0 0 0 2.1-2.13A31.25 31.25 0 0 0 24 12a31.25 31.25 0 0 0-.5-5.8zM9.6 15.57V8.43L15.82 12 9.6 15.57z"/></svg>
+            </a>
           </div>
         </div>
       </div>

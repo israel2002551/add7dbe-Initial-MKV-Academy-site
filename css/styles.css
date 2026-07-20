@@ -234,6 +234,14 @@ html.dark section.bg-white {
   background-color: #0f172a;
 }
 
+html.dark .bg-white {
+  background-color: #0f172a;
+}
+
+html.dark .bg-slate-50 {
+  background-color: #111827;
+}
+
 html.dark section.bg-slate-100 {
   background-color: #131c2e;
 }
@@ -244,6 +252,15 @@ html.dark .text-slate-900 {
 
 html.dark .text-slate-600 {
   color: #94a3b8;
+}
+
+html.dark .text-slate-700,
+html.dark .text-slate-500 {
+  color: #cbd5e1;
+}
+
+.password-toggle-wrap > input {
+  width: 100%;
 }
 
 html.dark #mobile-nav {
