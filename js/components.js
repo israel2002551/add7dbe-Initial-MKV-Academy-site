@@ -66,11 +66,11 @@ function mkvCurrentPage() {
 
 function mkvRenderLogo() {
   return `
-    <a href="index.html" class="flex items-center gap-3 group" aria-label="MKV Academy - Home">
-      <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-600 text-white font-extrabold font-technical text-sm tracking-tight shadow-lg shadow-brand-600/25 group-hover:bg-brand-700 transition-colors">
+    <a href="index.html" class="flex shrink-0 items-center gap-3 group" aria-label="MKV Academy - Home">
+      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white font-extrabold font-technical text-sm tracking-tight shadow-lg shadow-brand-600/25 group-hover:bg-brand-700 transition-colors">
         MKV
       </span>
-      <span class="text-lg font-extrabold tracking-tight text-slate-900">
+      <span class="whitespace-nowrap text-lg font-extrabold tracking-tight text-slate-900">
         ACADEMY
       </span>
     </a>
@@ -83,7 +83,7 @@ function mkvRenderNavbar() {
     const isActive = link.href === current;
     return `
       <a href="${link.href}"
-         class="relative text-sm font-medium transition-colors hover:text-brand-700 ${isActive ? "text-brand-700" : "text-slate-700"}"
+         class="relative whitespace-nowrap text-sm font-medium transition-colors hover:text-brand-700 ${isActive ? "text-brand-700" : "text-slate-700"}"
          ${isActive ? 'aria-current="page"' : ""}>
         <span data-i18n="${link.label}">${link.label}</span>
         <span class="absolute -bottom-1.5 left-0 h-0.5 rounded-full bg-brand-600 transition-all ${isActive ? "w-full" : "w-0 group-hover:w-full"}"></span>
@@ -103,47 +103,47 @@ function mkvRenderNavbar() {
 
   return `
     <header id="site-navbar" class="fixed top-0 w-full z-50 h-20 bg-white/95 backdrop-blur-md shadow-sm">
-      <div class="container-mkv h-full flex items-center justify-between">
+      <div class="mx-auto flex h-full w-full max-w-[118rem] items-center justify-between gap-5 px-5 sm:px-6 2xl:px-9">
         ${mkvRenderLogo()}
 
-        <nav class="hidden lg:flex items-center gap-8" aria-label="Primary">
+        <nav class="hidden 2xl:flex min-w-0 flex-1 items-center justify-center gap-6" aria-label="Primary">
           ${desktopLinks}
         </nav>
 
-        <div class="hidden lg:flex items-center gap-4">
+        <div class="hidden 2xl:flex shrink-0 items-center gap-4">
           <button data-theme-toggle type="button" aria-label="Toggle dark mode"
-                  class="h-10 w-10 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors">
+                  class="h-10 w-10 shrink-0 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors">
             <svg data-theme-icon-light class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
             <svg data-theme-icon-dark class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
           </button>
           <label class="sr-only" for="language-toggle">Language</label>
-          <select id="language-toggle" data-language-toggle class="h-10 rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-600/20">
+          <select id="language-toggle" data-language-toggle class="h-10 shrink-0 rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-600/20">
             <option value="en">EN</option>
             <option value="fr">FR</option>
           </select>
 
           <button data-login-trigger data-auth-logged-out type="button"
-                  class="text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors">
+                  class="whitespace-nowrap text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors">
             <span data-i18n="Student Login">Student Login</span>
           </button>
 
-          <div class="flex items-center gap-3">
-            <a href="students.html" data-auth-logged-in class="hidden text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors">
+          <div class="flex shrink-0 items-center gap-3">
+            <a href="students.html" data-auth-logged-in class="hidden whitespace-nowrap text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors">
               <span data-i18n="My Portal">My Portal</span>
             </a>
-            <a href="admin.html" data-auth-admin class="hidden text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors">
+            <a href="admin.html" data-auth-admin class="hidden whitespace-nowrap text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors">
               <span data-i18n="Admin">Admin</span>
             </a>
-            <a href="instructor.html" data-auth-instructor class="hidden text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors">
+            <a href="instructor.html" data-auth-instructor class="hidden whitespace-nowrap text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors">
               <span data-i18n="Instructor">Instructor</span>
             </a>
-            <button data-logout-trigger data-auth-logged-in type="button" class="hidden text-sm text-slate-400 hover:text-slate-600 transition-colors" aria-label="Log out">
+            <button data-logout-trigger data-auth-logged-in type="button" class="hidden whitespace-nowrap text-sm text-slate-400 hover:text-slate-600 transition-colors" aria-label="Log out">
               <span data-i18n="Log Out">Log Out</span>
             </button>
           </div>
 
           <a href="contact.html"
-             class="group inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-2.5 shadow-lg shadow-brand-600/25 hover:shadow-xl transition-all">
+             class="group inline-flex shrink-0 items-center gap-2 whitespace-nowrap bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-2.5 shadow-lg shadow-brand-600/25 hover:shadow-xl transition-all">
             <span data-i18n="Talk to Someone">Talk to Someone</span>
             <svg class="w-4 h-4 icon-nudge" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -152,7 +152,7 @@ function mkvRenderNavbar() {
         </div>
 
         <button id="mobile-menu-toggle" type="button"
-                class="lg:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg text-slate-700 hover:bg-slate-100"
+                class="2xl:hidden inline-flex items-center justify-center h-10 w-10 shrink-0 rounded-lg text-slate-700 hover:bg-slate-100"
                 aria-expanded="false" aria-controls="mobile-nav" aria-label="Toggle navigation menu">
           <svg id="icon-menu" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -163,7 +163,7 @@ function mkvRenderNavbar() {
         </button>
       </div>
 
-      <div id="mobile-nav" class="lg:hidden bg-white border-t border-slate-100">
+      <div id="mobile-nav" class="2xl:hidden bg-white border-t border-slate-100">
         <nav class="container-mkv py-3 space-y-1" aria-label="Mobile">
           ${mobileLinks}
 

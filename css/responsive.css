@@ -44,6 +44,13 @@ button,
   overflow-wrap: anywhere;
 }
 
+#site-navbar a,
+#site-navbar button,
+#site-navbar span,
+#site-navbar select {
+  overflow-wrap: normal;
+}
+
 .mkv-card {
   min-width: 0;
 }
