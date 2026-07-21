@@ -9,6 +9,7 @@
   let selectedInstructor = null;
   let referralEmailsCache = [];
   let editingCourseId = "";
+  let courseInstructorOptions = [];
 
   function isAdmin(user) {
     const role = user && user.profile && user.profile.role;
@@ -53,6 +54,21 @@
     } catch (error) {
       return `${code} ${value.toLocaleString()}`;
     }
+  }
+
+  function profileLabel(profile, fallbackId) {
+    if (!profile) return fallbackId || "Unknown user";
+    return profile.full_name || profile.email || fallbackId || profile.id || "Unknown user";
+  }
+
+  async function loadProfilesMap(userIds) {
+    const ids = [...new Set((userIds || []).filter(Boolean))];
+    if (!ids.length || !window.MKV_SUPABASE?.client) return new Map();
+    const { data } = await window.MKV_SUPABASE.client
+      .from("profiles")
+      .select("id, full_name, email, role")
+      .in("id", ids);
+    return new Map((data || []).map((profile) => [profile.id, profile]));
   }
 
   function showWorkspace(allowed) {
@@ -125,7 +141,7 @@
     });
   }
 
-  function startCourseEdit(course) {
+  async function startCourseEdit(course) {
     const form = document.getElementById("admin-course-form");
     const cancelBtn = document.getElementById("admin-course-cancel-edit");
     if (!form || !course) return;
@@ -138,6 +154,9 @@
     form.elements.price.value = course.price || 0;
     form.elements.currency.value = course.currency || "NGN";
     form.elements.level.value = course.level || "All Levels";
+    if (form.elements.instructor_id) {
+      form.elements.instructor_id.value = await getCourseInstructorId(course.id);
+    }
     if (form.elements.thumbnail) form.elements.thumbnail.value = "";
     cancelBtn && cancelBtn.classList.remove("hidden");
     form.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -151,7 +170,53 @@
     form.reset();
     form.elements.id.readOnly = false;
     form.elements.id.classList.remove("bg-slate-100", "text-slate-500");
+    if (form.elements.instructor_id) form.elements.instructor_id.value = "";
     cancelBtn && cancelBtn.classList.add("hidden");
+  }
+
+  async function loadCourseInstructorOptions() {
+    const select = document.getElementById("admin-course-instructor-select");
+    if (!select || !window.MKV_SUPABASE?.client) return;
+
+    const { data, error } = await window.MKV_SUPABASE.client
+      .from("profiles")
+      .select("id, full_name, email, role")
+      .in("role", ["instructor", "admin", "owner"])
+      .order("full_name", { ascending: true });
+
+    if (error) {
+      select.innerHTML = `<option value="">Could not load instructors</option>`;
+      return;
+    }
+
+    courseInstructorOptions = data || [];
+    select.innerHTML = [
+      `<option value="">No instructor assigned</option>`,
+      ...courseInstructorOptions.map((instructor) => `<option value="${instructor.id}">${escapeHtml(profileLabel(instructor, instructor.id))}</option>`),
+    ].join("");
+  }
+
+  async function getCourseInstructorId(courseId) {
+    if (!courseId || !window.MKV_SUPABASE?.client) return "";
+    const { data } = await window.MKV_SUPABASE.client
+      .from("course_instructors")
+      .select("instructor_id")
+      .eq("course_id", courseId)
+      .limit(1)
+      .maybeSingle();
+    return data?.instructor_id || "";
+  }
+
+  async function syncCourseInstructor(courseId, instructorId) {
+    if (!courseId || !window.MKV_SUPABASE?.client) return;
+    const { error: deleteError } = await window.MKV_SUPABASE.client.from("course_instructors").delete().eq("course_id", courseId);
+    if (deleteError) throw deleteError;
+    if (!instructorId) return;
+    const { error } = await window.MKV_SUPABASE.client.from("course_instructors").upsert({
+      course_id: courseId,
+      instructor_id: instructorId,
+    });
+    if (error) throw error;
   }
 
   async function deleteCourse(courseId) {
@@ -610,12 +675,31 @@
           payload.thumbnail_path = thumbnailPath;
         }
 
-        const { error } = await window.MKV_SUPABASE.client.from("courses").upsert(payload);
+        const instructorId = formData.get("instructor_id") || "";
+        let { error } = await window.MKV_SUPABASE.client.from("courses").upsert(payload, { onConflict: "id" });
+        let savedWithoutLevel = false;
+        if (error && String(error.message || "").toLowerCase().includes("level")) {
+          const fallbackPayload = { ...payload };
+          delete fallbackPayload.level;
+          const fallback = await window.MKV_SUPABASE.client.from("courses").upsert(fallbackPayload, { onConflict: "id" });
+          error = fallback.error;
+          savedWithoutLevel = !error;
+        }
         if (error) throw error;
 
-        setMessage(editingCourseId ? "Course updated." : "Course saved.", "success");
+        await syncCourseInstructor(id, instructorId);
+
+        setMessage(
+          savedWithoutLevel
+            ? "Course saved. Run the course level SQL upgrade before saving complexity."
+            : editingCourseId
+              ? "Course updated."
+              : "Course saved.",
+          "success"
+        );
         resetCourseForm();
         await loadCourses();
+        await loadInstructorUsers();
       } catch (error) {
         setMessage(error.message, "error");
       }
@@ -1125,6 +1209,7 @@
       role === "instructor" ? "instructor.html" : "students.html"
     );
     await loadInstructorUsers();
+    await loadCourseInstructorOptions();
     await renderInstructorDetail();
   }
 
@@ -1166,8 +1251,24 @@
       return;
     }
 
-    list.innerHTML = (data || []).length
-      ? data.map(submissionMarkup).join("")
+    const submissions = data || [];
+    const studentProfiles = await loadProfilesMap(submissions.map((item) => item.user_id));
+    const courseIds = [...new Set(submissions.map((item) => item.course_id).filter(Boolean))];
+    let instructorMap = new Map();
+    if (courseIds.length) {
+      const { data: assignments } = await window.MKV_SUPABASE.client
+        .from("course_instructors")
+        .select("course_id, instructor_id")
+        .in("course_id", courseIds);
+      const instructorProfiles = await loadProfilesMap((assignments || []).map((item) => item.instructor_id));
+      (assignments || []).forEach((item) => {
+        if (!instructorMap.has(item.course_id)) instructorMap.set(item.course_id, []);
+        instructorMap.get(item.course_id).push(instructorProfiles.get(item.instructor_id) || { id: item.instructor_id });
+      });
+    }
+
+    list.innerHTML = submissions.length
+      ? submissions.map((submission) => submissionMarkup(submission, studentProfiles, instructorMap)).join("")
       : `<p class="py-4 text-sm text-slate-400">No submissions yet.</p>`;
     await appendProjectReviews(list);
 
@@ -1228,6 +1329,7 @@
       .limit(20);
     if (error) return;
     if (!data || !data.length) return;
+    const profileMap = await loadProfilesMap(data.map((item) => item.user_id));
     list.insertAdjacentHTML("beforeend", `
       <div class="pt-6">
         <h3 class="font-bold text-slate-900">Project Reviews</h3>
@@ -1237,7 +1339,7 @@
               <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                 <div>
                   <p class="font-semibold text-slate-900">${escapeHtml(item.subject)}</p>
-                  <p class="mt-1 text-xs text-slate-400">${item.user_id} - ${item.status}</p>
+                  <p class="mt-1 text-xs text-slate-400">Student: ${escapeHtml(profileLabel(profileMap.get(item.user_id), item.user_id))} - ${item.status}</p>
                   ${item.note ? `<p class="mt-2 text-sm text-slate-600">${escapeHtml(item.note)}</p>` : ""}
                 </div>
                 <div class="flex flex-wrap gap-2">
@@ -1282,14 +1384,20 @@
     });
   }
 
-  function submissionMarkup(submission) {
+  function submissionMarkup(submission, studentProfiles = new Map(), instructorMap = new Map()) {
     const lesson = Array.isArray(submission.lessons) ? submission.lessons[0] : submission.lessons;
+    const student = studentProfiles.get(submission.user_id);
+    const instructors = instructorMap.get(submission.course_id) || [];
+    const instructorText = instructors.length
+      ? instructors.map((profile) => profileLabel(profile, profile.id)).join(", ")
+      : "No instructor assigned";
     return `
       <article class="py-5">
         <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div>
             <p class="font-semibold text-slate-900">${lesson?.title || submission.lesson_id}</p>
-            <p class="mt-1 text-xs text-slate-400">${submission.user_id} - ${submission.course_id}</p>
+            <p class="mt-1 text-xs text-slate-400">Student: ${escapeHtml(profileLabel(student, submission.user_id))}</p>
+            <p class="mt-1 text-xs text-slate-400">Course: ${escapeHtml(submission.course_id)} - Instructor: ${escapeHtml(instructorText)}</p>
             ${submission.note ? `<p class="mt-2 text-sm text-slate-600">${submission.note}</p>` : ""}
           </div>
           <div class="flex flex-wrap gap-2">
@@ -1365,6 +1473,7 @@
       console.warn("Could not revoke expired enrollments", error);
     }
     await loadCourses();
+    await loadCourseInstructorOptions();
     await loadAnalytics();
     await loadLessons();
     await loadLandingVideos();

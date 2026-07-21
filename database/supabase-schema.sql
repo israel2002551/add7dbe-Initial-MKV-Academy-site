@@ -578,6 +578,7 @@ end;
 $$;
 
 drop policy if exists "Students can read own profile" on public.profiles;
+drop policy if exists "Staff can read profiles" on public.profiles;
 drop policy if exists "Students can insert own profile" on public.profiles;
 drop policy if exists "Students can update own profile" on public.profiles;
 drop policy if exists "Admins manage profiles" on public.profiles;
@@ -633,6 +634,10 @@ drop policy if exists "Admins manage landing videos" on public.landing_videos;
 create policy "Students can read own profile"
 on public.profiles for select
 using (id = auth.uid() or public.is_admin());
+
+create policy "Staff can read profiles"
+on public.profiles for select
+using (public.is_staff());
 
 create policy "Students can insert own profile"
 on public.profiles for insert
@@ -773,7 +778,15 @@ with check (
 
 create policy "Students read own submissions"
 on public.assignment_submissions for select
-using (user_id = auth.uid() or public.is_staff());
+using (
+  user_id = auth.uid()
+  or public.is_admin()
+  or exists (
+    select 1 from public.course_instructors
+    where course_instructors.course_id = assignment_submissions.course_id
+      and course_instructors.instructor_id = auth.uid()
+  )
+);
 
 create policy "Students submit own assignments"
 on public.assignment_submissions for insert
@@ -788,12 +801,33 @@ with check (
 
 create policy "Admins review submissions"
 on public.assignment_submissions for update
-using (public.is_staff())
-with check (public.is_staff());
+using (
+  public.is_admin()
+  or exists (
+    select 1 from public.course_instructors
+    where course_instructors.course_id = assignment_submissions.course_id
+      and course_instructors.instructor_id = auth.uid()
+  )
+)
+with check (
+  public.is_admin()
+  or exists (
+    select 1 from public.course_instructors
+    where course_instructors.course_id = assignment_submissions.course_id
+      and course_instructors.instructor_id = auth.uid()
+  )
+);
 
 create policy "Staff delete submissions"
 on public.assignment_submissions for delete
-using (public.is_staff());
+using (
+  public.is_admin()
+  or exists (
+    select 1 from public.course_instructors
+    where course_instructors.course_id = assignment_submissions.course_id
+      and course_instructors.instructor_id = auth.uid()
+  )
+);
 
 create policy "Students read own project reviews"
 on public.project_review_submissions for select

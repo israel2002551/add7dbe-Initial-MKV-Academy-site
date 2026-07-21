@@ -31,6 +31,21 @@
     })[char]);
   }
 
+  function profileLabel(profile, fallbackId) {
+    if (!profile) return fallbackId || "Unknown student";
+    return profile.full_name || profile.email || fallbackId || profile.id || "Unknown student";
+  }
+
+  async function loadProfilesMap(userIds) {
+    const ids = [...new Set((userIds || []).filter(Boolean))];
+    if (!ids.length || !window.MKV_SUPABASE?.client) return new Map();
+    const { data } = await window.MKV_SUPABASE.client
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", ids);
+    return new Map((data || []).map((profile) => [profile.id, profile]));
+  }
+
   async function loadCourses() {
     const user = window.MKV_CURRENT_USER;
     const select = document.getElementById("instructor-course-select");
@@ -96,10 +111,14 @@
       list.innerHTML = `<p class="py-4 text-sm text-red-600">${error.message}</p>`;
       return;
     }
-    lastSubmissions = data || [];
+    const profileMap = await loadProfilesMap((data || []).map((submission) => submission.user_id));
+    lastSubmissions = (data || []).map((submission) => ({
+      ...submission,
+      student_profile: profileMap.get(submission.user_id) || null,
+    }));
     renderSubmissionStats();
-    list.innerHTML = (data || []).length
-      ? data.map(submissionMarkup).join("")
+    list.innerHTML = lastSubmissions.length
+      ? lastSubmissions.map(submissionMarkup).join("")
       : `<p class="py-4 text-sm text-slate-400">No submissions yet.</p>`;
     bindSubmissionActions();
   }
@@ -135,7 +154,8 @@
         <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div>
             <p class="font-semibold text-slate-900">${escapeHtml(lesson?.title || submission.course_id)}</p>
-            <p class="mt-1 text-xs text-slate-400">${escapeHtml(submission.user_id)} - ${escapeHtml(submission.course_id)} - ${escapeHtml(submission.status)}</p>
+            <p class="mt-1 text-xs text-slate-400">Student: ${escapeHtml(profileLabel(submission.student_profile, submission.user_id))}</p>
+            <p class="mt-1 text-xs text-slate-400">Course: ${escapeHtml(submission.course_id)} - ${escapeHtml(submission.status)}</p>
             ${submission.note ? `<p class="mt-2 text-sm text-slate-600">${escapeHtml(submission.note)}</p>` : ""}
           </div>
           <div class="flex flex-wrap gap-2">
