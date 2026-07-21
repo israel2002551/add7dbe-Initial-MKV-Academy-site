@@ -145,17 +145,62 @@
     bindPreviewButtons();
   }
 
-  function syllabusMarkup(course) {
-    const lectures = course.lectures && course.lectures.length ? course.lectures : [];
-    if (!lectures.length) {
+  function groupSyllabusRows(rows) {
+    const chapters = new Map();
+    (rows || []).forEach((row) => {
+      const title = row.chapter_title || "General";
+      const order = Number(row.chapter_order || 1);
+      if (!chapters.has(title)) chapters.set(title, { title, order, lessons: [] });
+      chapters.get(title).lessons.push(row);
+    });
+    return [...chapters.values()]
+      .sort((a, b) => a.order - b.order)
+      .map((chapter) => ({
+        ...chapter,
+        lessons: chapter.lessons.sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)),
+      }));
+  }
+
+  function fallbackSyllabusRows(course) {
+    return (course.lectures || []).map((lecture, index) => ({
+      chapter_title: lecture.chapter_title || lecture.title || `Chapter ${index + 1}`,
+      chapter_order: lecture.chapter_order || index + 1,
+      title: lecture.lesson_title || lecture.title || `Lesson ${index + 1}`,
+      description: lecture.description || "",
+      sort_order: lecture.sort_order || 1,
+    }));
+  }
+
+  function syllabusMarkup(course, rows) {
+    const chapters = groupSyllabusRows(rows && rows.length ? rows : fallbackSyllabusRows(course));
+    if (!chapters.length) {
       return `<p class="rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500">Detailed syllabus will be added soon.</p>`;
     }
-    return `<div class="divide-y divide-slate-100 rounded-xl border border-slate-100">${lectures.map((lecture, index) => `
+    return `<div class="divide-y divide-slate-100 rounded-xl border border-slate-100">${chapters.map((chapter, index) => `
       <details class="group p-4" ${index === 0 ? "open" : ""}>
-        <summary class="cursor-pointer list-none font-semibold text-slate-900">${index + 1}. ${escapeText(lecture.title)}</summary>
-        <p class="mt-2 text-sm text-slate-600">${escapeText(lecture.description || "Lecture details coming soon.")}</p>
+        <summary class="cursor-pointer list-none font-semibold text-slate-900">Chapter ${chapter.order}: ${escapeText(chapter.title)}</summary>
+        <ol class="mt-3 space-y-2">
+          ${chapter.lessons.map((lesson) => `
+            <li class="rounded-lg bg-slate-50 px-3 py-2">
+              <p class="text-sm font-semibold text-slate-800">Lesson ${escapeText(lesson.sort_order || "")}: ${escapeText(lesson.title || "Untitled lesson")}</p>
+              ${lesson.description ? `<p class="mt-1 text-xs text-slate-500">${escapeText(lesson.description)}</p>` : ""}
+            </li>
+          `).join("")}
+        </ol>
       </details>
     `).join("")}</div>`;
+  }
+
+  async function loadCourseSyllabus(courseId) {
+    if (!window.MKV_SUPABASE?.isConfigured) return [];
+    const { data, error } = await window.MKV_SUPABASE.client.rpc("get_public_course_syllabus", {
+      p_course_id: courseId,
+    });
+    if (error) {
+      console.warn("Could not load course syllabus", error);
+      return [];
+    }
+    return data || [];
   }
 
   function escapeText(value) {
@@ -168,11 +213,12 @@
     })[char]);
   }
 
-  function openCoursePreview(courseId) {
+  async function openCoursePreview(courseId) {
     const course = coursesCache.find((item) => item.id === courseId);
     const modal = document.getElementById("course-preview-modal");
     const content = document.getElementById("course-preview-content");
     if (!course || !modal || !content) return;
+    const syllabusId = `course-syllabus-${course.id}`;
     content.innerHTML = `
       <div class="relative min-h-60 bg-gradient-to-br ${cardTopClass(course.cardStyle)} p-6 text-white">
         ${course.thumbnailUrl ? `<img src="${course.thumbnailUrl}" alt="" class="absolute inset-0 h-full w-full object-cover" /><div class="absolute inset-0 bg-slate-950/50"></div>` : ""}
@@ -186,7 +232,7 @@
       <div class="grid gap-6 p-6 lg:grid-cols-[1fr_260px]">
         <div>
           <h3 class="text-lg font-bold text-slate-900">Course Syllabus</h3>
-          <div class="mt-4">${syllabusMarkup(course)}</div>
+          <div id="${syllabusId}" class="mt-4">${syllabusMarkup(course, [])}</div>
         </div>
         <aside class="rounded-xl border border-slate-100 bg-slate-50 p-5">
           <p class="text-xs font-semibold uppercase text-slate-400">Level</p>
@@ -201,6 +247,12 @@
     `;
     modal.classList.remove("hidden");
     content.querySelector("[data-close-course-preview]")?.addEventListener("click", closeCoursePreview);
+    const syllabus = document.getElementById(syllabusId);
+    if (syllabus && window.MKV_SUPABASE?.isConfigured) {
+      syllabus.innerHTML = `<p class="rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500">Loading course chapters...</p>`;
+      const rows = await loadCourseSyllabus(course.id);
+      syllabus.innerHTML = syllabusMarkup(course, rows);
+    }
   }
 
   function closeCoursePreview() {
