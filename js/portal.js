@@ -291,38 +291,48 @@
     return url;
   }
 
-  function courseCard(course) {
+  function courseCard(course, index) {
     const pct = courseProgress(course);
+    const chapterCount = groupLessonsByChapter(course.lessons).length;
+    const lessonCount = course.lessons.length;
     return `
-      <article class="mkv-card p-6">
-        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          <div>
-            <p class="font-technical text-xs uppercase tracking-widest text-brand-700">Enrolled Course</p>
-            <h3 class="mt-2 text-xl font-bold text-slate-900">${course.title}</h3>
-            ${course.description ? `<p class="mt-2 text-sm text-slate-600">${course.description}</p>` : ""}
-            ${course.expires_at ? `<p class="mt-2 text-xs font-semibold text-amber-700">Access expires ${new Date(course.expires_at).toLocaleDateString()}</p>` : ""}
-          </div>
-          <span class="text-xs font-technical text-slate-400">${pct}% complete</span>
-        </div>
-        <div class="mt-4 h-2 rounded-full bg-slate-100 overflow-hidden">
-          <div class="h-full bg-brand-600 rounded-full transition-all" style="width: ${pct}%"></div>
-        </div>
-        <div class="mt-5">
-          ${
-            course.lessons.length
-              ? groupLessonsByChapter(course.lessons).map((chapter, index) => chapterMarkup(chapter, course, index)).join("")
-              : `<p class="py-4 text-sm text-slate-400 border-t border-slate-100">Lessons have not been uploaded for this course yet.</p>`
-          }
-        </div>
-        <div class="mt-6 rounded-xl border border-slate-100 bg-slate-50 p-5">
-          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <article class="mkv-card">
+        <details ${index === 0 ? "open" : ""}>
+          <summary class="flex cursor-pointer list-none flex-col gap-4 p-6 md:flex-row md:items-start md:justify-between">
             <div>
-              <p class="font-semibold text-slate-900">Overall Course Assessment</p>
-              <p class="mt-1 text-sm text-slate-600">Submit your final CAD files, reports, or ZIP package for instructor grading when you complete the course.</p>
+              <p class="font-technical text-xs uppercase tracking-widest text-brand-700">Enrolled Course</p>
+              <h3 class="mt-2 text-xl font-bold text-slate-900">${course.title}</h3>
+              ${course.description ? `<p class="mt-2 text-sm text-slate-600">${course.description}</p>` : ""}
+              ${course.expires_at ? `<p class="mt-2 text-xs font-semibold text-amber-700">Access expires ${new Date(course.expires_at).toLocaleDateString()}</p>` : ""}
+              <p class="mt-3 text-xs font-semibold text-slate-500">${chapterCount} chapter${chapterCount === 1 ? "" : "s"} - ${lessonCount} lesson${lessonCount === 1 ? "" : "s"}</p>
             </div>
-            <a href="#project-review" class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">Submit Final Project</a>
+            <div class="flex flex-wrap items-center gap-2 md:justify-end">
+              <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">${pct}% complete</span>
+              <span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">Open / Close</span>
+            </div>
+          </summary>
+          <div class="px-6 pb-6">
+            <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+              <div class="h-full bg-brand-600 rounded-full transition-all" style="width: ${pct}%"></div>
+            </div>
+            <div class="mt-5">
+              ${
+                course.lessons.length
+                  ? groupLessonsByChapter(course.lessons).map((chapter, chapterIndex) => chapterMarkup(chapter, course, chapterIndex)).join("")
+                  : `<p class="py-4 text-sm text-slate-400 border-t border-slate-100">Lessons have not been uploaded for this course yet.</p>`
+              }
+            </div>
+            <div class="mt-6 rounded-xl border border-slate-100 bg-slate-50 p-5">
+              <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div>
+                  <p class="font-semibold text-slate-900">Overall Course Assessment</p>
+                  <p class="mt-1 text-sm text-slate-600">Submit your final CAD files, reports, or ZIP package for instructor grading when you complete the course.</p>
+                </div>
+                <a href="#project-review" class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">Submit Final Project</a>
+              </div>
+            </div>
           </div>
-        </div>
+        </details>
       </article>
     `;
   }
@@ -564,7 +574,7 @@
       return;
     }
 
-    list.innerHTML = courses.map(courseCard).join("");
+    list.innerHTML = courses.map((course, index) => courseCard(course, index)).join("");
     bindPortalActions(courses);
   }
 
