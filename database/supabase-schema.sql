@@ -107,9 +107,12 @@ create table if not exists public.enrollments (
   user_id uuid not null references auth.users(id) on delete cascade,
   course_id text not null references public.courses(id) on delete cascade,
   order_id uuid references public.orders(id) on delete set null,
+  expires_at timestamptz,
   created_at timestamptz not null default now(),
   unique (user_id, course_id)
 );
+
+alter table public.enrollments add column if not exists expires_at timestamptz;
 
 create table if not exists public.lesson_progress (
   id uuid primary key default gen_random_uuid(),
@@ -267,8 +270,11 @@ create table if not exists public.referrals (
   referred_user_id uuid references auth.users(id) on delete set null,
   status text not null default 'pending' check (status in ('pending', 'signed_up', 'paid')),
   reward_status text not null default 'none' check (reward_status in ('none', 'pending', 'approved', 'paid')),
+  reward_coupon_code text,
   created_at timestamptz not null default now()
 );
+
+alter table public.referrals add column if not exists reward_coupon_code text;
 
 create table if not exists public.coupons (
   id uuid primary key default gen_random_uuid(),

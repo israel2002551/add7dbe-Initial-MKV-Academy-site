@@ -85,15 +85,20 @@
       return LOCAL_PREVIEW_COURSES;
     }
 
+    await supa.client.rpc("revoke_expired_enrollments").catch(() => null);
+
     const { data: enrollments, error: enrollmentError } = await supa.client
       .from("enrollments")
-      .select("course_id, created_at, courses(id, title, description, drip_enabled, certificate_enabled)")
+      .select("course_id, created_at, expires_at, courses(id, title, description, drip_enabled, certificate_enabled)")
       .eq("user_id", userId);
 
     if (enrollmentError) throw enrollmentError;
     if (!enrollments || !enrollments.length) return [];
 
-    const courseIds = enrollments.map((item) => item.course_id);
+    const activeEnrollments = (enrollments || []).filter((item) => !item.expires_at || new Date(item.expires_at).getTime() > Date.now());
+    if (!activeEnrollments.length) return [];
+
+    const courseIds = activeEnrollments.map((item) => item.course_id);
     const { data: lessons, error: lessonsError } = await supa.client
       .from("lessons")
       .select("*")
@@ -106,7 +111,7 @@
     await loadRemoteProgress(userId);
     await loadSubmissionStatus(userId);
 
-    return enrollments.map((item) => {
+    return activeEnrollments.map((item) => {
       const course = item.courses || { id: item.course_id, title: item.course_id, description: "" };
       return {
         id: course.id,
@@ -115,6 +120,7 @@
         drip_enabled: course.drip_enabled,
         certificate_enabled: course.certificate_enabled,
         enrolled_at: item.created_at,
+        expires_at: item.expires_at,
         lessons: (lessons || []).filter((lesson) => lesson.course_id === course.id),
       };
     });
@@ -258,6 +264,29 @@
     `;
   }
 
+  function embedUrl(value) {
+    const url = String(value || "").trim();
+    if (!url) return "";
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname.includes("youtu.be")) {
+        const id = parsed.pathname.replace("/", "");
+        return id ? `https://www.youtube-nocookie.com/embed/${id}` : url;
+      }
+      if (parsed.hostname.includes("youtube.com")) {
+        const id = parsed.searchParams.get("v") || parsed.pathname.split("/").pop();
+        return id ? `https://www.youtube-nocookie.com/embed/${id}` : url;
+      }
+      if (parsed.hostname.includes("drive.google.com") && parsed.pathname.includes("/file/d/")) {
+        const id = parsed.pathname.split("/file/d/")[1]?.split("/")[0];
+        return id ? `https://drive.google.com/file/d/${id}/preview` : url;
+      }
+    } catch (e) {
+      return url;
+    }
+    return url;
+  }
+
   function courseCard(course) {
     const pct = courseProgress(course);
     return `
@@ -267,6 +296,7 @@
             <p class="font-technical text-xs uppercase tracking-widest text-brand-700">Enrolled Course</p>
             <h3 class="mt-2 text-xl font-bold text-slate-900">${course.title}</h3>
             ${course.description ? `<p class="mt-2 text-sm text-slate-600">${course.description}</p>` : ""}
+            ${course.expires_at ? `<p class="mt-2 text-xs font-semibold text-amber-700">Access expires ${new Date(course.expires_at).toLocaleDateString()}</p>` : ""}
           </div>
           <span class="text-xs font-technical text-slate-400">${pct}% complete</span>
         </div>
@@ -312,7 +342,7 @@
 
     document.querySelectorAll("[data-open-external-video]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        openVideoPlayer(btn.getAttribute("data-url"), btn.closest("[data-lesson-row]")?.querySelector("h4")?.textContent || "Lesson video", true);
+        openVideoPlayer(embedUrl(btn.getAttribute("data-url")), btn.closest("[data-lesson-row]")?.querySelector("h4")?.textContent || "Lesson video", true);
       });
     });
 
@@ -599,12 +629,12 @@
     if (!wrap || !user || !window.MKV_SUPABASE?.isConfigured) return;
     const { data } = await window.MKV_SUPABASE.client
       .from("referrals")
-      .select("referred_email, status, reward_status")
+      .select("referred_email, status, reward_status, reward_coupon_code")
       .eq("referrer_id", user.id)
       .order("created_at", { ascending: false })
       .limit(5);
     wrap.innerHTML = data && data.length
-      ? data.map((r) => `<p>${r.referred_email || "Invite"} - ${r.status} / ${r.reward_status}</p>`).join("")
+      ? data.map((r) => `<p>${r.referred_email || "Invite"} - ${r.status} / ${r.reward_coupon_code || r.reward_status}</p>`).join("")
       : "No referrals yet.";
   }
 

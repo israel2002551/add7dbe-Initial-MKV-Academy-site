@@ -68,6 +68,7 @@
     const { data, error } = await window.MKV_SUPABASE.client
       .from("courses")
       .select("id, title")
+      .eq("is_active", true)
       .order("title", { ascending: true });
 
     if (error) {
@@ -79,6 +80,56 @@
     select.innerHTML = adminCourses
       .map((course) => `<option value="${course.id}">${course.title}</option>`)
       .join("");
+    renderCourseManager();
+  }
+
+  function renderCourseManager() {
+    const list = document.getElementById("admin-courses-list");
+    if (!list) return;
+    list.innerHTML = adminCourses.length
+      ? adminCourses.map((course) => `
+        <div class="py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <p class="font-semibold text-slate-900">${escapeHtml(course.title)}</p>
+            <p class="mt-1 text-xs text-slate-400">${escapeHtml(course.id)}</p>
+          </div>
+          <button type="button" data-delete-course="${course.id}" class="bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg px-3 py-2">Delete Course</button>
+        </div>
+      `).join("")
+      : `<p class="py-4 text-sm text-slate-400">No active courses yet.</p>`;
+    list.querySelectorAll("[data-delete-course]").forEach((btn) => {
+      btn.addEventListener("click", () => deleteCourse(btn.getAttribute("data-delete-course")));
+    });
+  }
+
+  async function deleteCourse(courseId) {
+    const course = adminCourses.find((item) => item.id === courseId);
+    if (!courseId || !window.confirm(`Delete "${course?.title || courseId}" from courses, dropdowns, and student access?`)) return;
+    try {
+      const lessonIds = await lessonIdsForCourse(courseId);
+      if (lessonIds.length) await window.MKV_SUPABASE.client.from("lesson_progress").delete().in("lesson_id", lessonIds);
+      await window.MKV_SUPABASE.client.from("assignment_submissions").delete().eq("course_id", courseId);
+      await window.MKV_SUPABASE.client.from("course_instructors").delete().eq("course_id", courseId);
+      await window.MKV_SUPABASE.client.from("enrollments").delete().eq("course_id", courseId);
+      await window.MKV_SUPABASE.client.from("lessons").delete().eq("course_id", courseId);
+      const { error } = await window.MKV_SUPABASE.client.from("courses").delete().eq("id", courseId);
+      if (error) {
+        const { error: archiveError } = await window.MKV_SUPABASE.client.from("courses").update({ is_active: false }).eq("id", courseId);
+        if (archiveError) throw archiveError;
+        setMessage("Course had protected records, so it was removed from active dropdowns/catalog instead.", "success");
+      } else {
+        setMessage("Course deleted.", "success");
+      }
+      await loadCourses();
+      await loadLessons();
+    } catch (error) {
+      setMessage(error.message, "error");
+    }
+  }
+
+  async function lessonIdsForCourse(courseId) {
+    const { data } = await window.MKV_SUPABASE.client.from("lessons").select("id").eq("course_id", courseId);
+    return (data || []).map((lesson) => lesson.id);
   }
 
   async function loadLessons() {
@@ -369,15 +420,98 @@
           </div>
           <div class="mt-4 overflow-x-auto">
             <table class="w-full text-left text-sm">
-              <thead class="text-xs uppercase text-slate-400"><tr><th class="py-2 pr-4">Referee Email</th><th class="py-2 pr-4">Status</th><th class="py-2">Reward</th></tr></thead>
+              <thead class="text-xs uppercase text-slate-400"><tr><th class="py-2 pr-4">Referee Email</th><th class="py-2 pr-4">Status</th><th class="py-2 pr-4">Reward</th><th class="py-2">Actions</th></tr></thead>
               <tbody class="divide-y divide-slate-100">
-                ${referrer.referrals.map((row) => `<tr><td class="py-2 pr-4 text-slate-700">${escapeHtml(row.referred_email || "No email")}</td><td class="py-2 pr-4 text-slate-500">${escapeHtml(row.status || "pending")}</td><td class="py-2 text-slate-500">${escapeHtml(row.reward_status || "none")}</td></tr>`).join("")}
+                ${referrer.referrals.map((row) => `
+                  <tr>
+                    <td class="py-2 pr-4 text-slate-700">${escapeHtml(row.referred_email || "No email")}</td>
+                    <td class="py-2 pr-4 text-slate-500">${escapeHtml(row.status || "pending")}</td>
+                    <td class="py-2 pr-4 text-slate-500">${escapeHtml(row.reward_coupon_code || row.reward_status || "none")}</td>
+                    <td class="py-2">
+                      <div class="flex flex-wrap gap-2">
+                        <button type="button" data-approve-referral="${row.id}" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg px-3 py-2">Approve</button>
+                        <button type="button" data-reward-referral="${row.id}" data-referrer-id="${row.referrer_id}" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg px-3 py-2">Issue Coupon</button>
+                        <button type="button" data-clear-referral="${row.id}" class="bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg px-3 py-2">Clear</button>
+                      </div>
+                    </td>
+                  </tr>
+                `).join("")}
               </tbody>
             </table>
           </div>
         </article>
       `).join("")
       : `<p class="py-4 text-sm text-slate-400">No referrals yet.</p>`;
+
+    list.querySelectorAll("[data-approve-referral]").forEach((btn) => {
+      btn.addEventListener("click", () => approveReferral(btn.getAttribute("data-approve-referral")));
+    });
+    list.querySelectorAll("[data-reward-referral]").forEach((btn) => {
+      btn.addEventListener("click", () => issueReferralReward(btn.getAttribute("data-reward-referral"), btn.getAttribute("data-referrer-id")));
+    });
+    list.querySelectorAll("[data-clear-referral]").forEach((btn) => {
+      btn.addEventListener("click", () => clearReferral(btn.getAttribute("data-clear-referral")));
+    });
+  }
+
+  async function approveReferral(referralId) {
+    const { error } = await window.MKV_SUPABASE.client
+      .from("referrals")
+      .update({ status: "paid", reward_status: "approved" })
+      .eq("id", referralId);
+    if (error) {
+      setMessage(error.message, "error");
+      return;
+    }
+    setMessage("Referral approved.", "success");
+    await loadReferralAnalytics();
+  }
+
+  async function issueReferralReward(referralId, referrerId) {
+    if (!referrerId) return;
+    const code = `REF${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const { error: couponError } = await window.MKV_SUPABASE.client.from("coupons").insert({
+      code,
+      discount_type: "percent",
+      discount_value: 20,
+      max_redemptions: 1,
+      is_active: true,
+      created_by: window.MKV_CURRENT_USER && window.MKV_CURRENT_USER.id,
+    });
+    if (couponError) {
+      setMessage(couponError.message, "error");
+      return;
+    }
+
+    const { error } = await window.MKV_SUPABASE.client
+      .from("referrals")
+      .update({ reward_status: "paid", reward_coupon_code: code })
+      .eq("id", referralId);
+    if (error) {
+      setMessage(error.message, "error");
+      return;
+    }
+
+    await createNotification(
+      referrerId,
+      "Referral reward issued",
+      `Your referral reward coupon is ${code}. Use it for a 20% discount on your next course.`,
+      "courses.html"
+    );
+    setMessage(`Reward coupon ${code} issued and sent to student.`, "success");
+    await loadCoupons();
+    await loadReferralAnalytics();
+  }
+
+  async function clearReferral(referralId) {
+    if (!referralId || !window.confirm("Clear this referral from admin and the student's referral page?")) return;
+    const { error } = await window.MKV_SUPABASE.client.from("referrals").delete().eq("id", referralId);
+    if (error) {
+      setMessage(error.message, "error");
+      return;
+    }
+    setMessage("Referral cleared.", "success");
+    await loadReferralAnalytics();
   }
 
   async function copyReferralEmails() {
@@ -608,7 +742,7 @@
 
     const { data: enrollments, error } = await window.MKV_SUPABASE.client
       .from("enrollments")
-      .select("id, course_id, created_at")
+      .select("id, course_id, created_at, expires_at")
       .eq("user_id", selectedStudent.id);
 
     if (error) {
@@ -616,7 +750,7 @@
       return;
     }
 
-    const enrolledIds = new Set((enrollments || []).map((item) => item.course_id));
+    const enrollmentMap = new Map((enrollments || []).map((item) => [item.course_id, item]));
     detail.innerHTML = `
       <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
@@ -632,14 +766,35 @@
         <div class="mt-3 space-y-2">
           ${adminCourses
             .map((course) => {
-              const hasAccess = enrolledIds.has(course.id);
+              const enrollment = enrollmentMap.get(course.id);
+              const hasAccess = !!enrollment;
+              const expires = enrollment?.expires_at ? new Date(enrollment.expires_at).toLocaleDateString() : "No expiry";
               return `
-                <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-100 px-4 py-3">
-                  <span class="text-sm text-slate-700">${course.title}</span>
-                  <button type="button" data-access-action="${hasAccess ? "revoke" : "grant"}" data-course-id="${course.id}"
-                          class="${hasAccess ? "bg-red-50 text-red-700 hover:bg-red-100" : "bg-brand-600 text-white hover:bg-brand-700"} text-xs font-semibold rounded-lg px-3 py-2">
-                    ${hasAccess ? "Revoke" : "Grant"}
-                  </button>
+                <div class="rounded-lg border border-slate-100 px-4 py-3">
+                  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                    <div>
+                      <span class="text-sm font-semibold text-slate-700">${course.title}</span>
+                      <span class="block mt-1 text-xs text-slate-400">Access: ${hasAccess ? expires : "not granted"}</span>
+                    </div>
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                      ${
+                        hasAccess
+                          ? ""
+                          : `<select data-access-duration="${course.id}" class="rounded-lg border border-slate-200 px-3 py-2 text-xs">
+                              <option value="2m">2 months</option>
+                              <option value="6m">6 months</option>
+                              <option value="1y">1 year</option>
+                              <option value="none">No expiry</option>
+                              <option value="custom">Custom date</option>
+                            </select>
+                            <input data-access-custom-date="${course.id}" type="date" class="hidden rounded-lg border border-slate-200 px-3 py-2 text-xs" />`
+                      }
+                      <button type="button" data-access-action="${hasAccess ? "revoke" : "grant"}" data-course-id="${course.id}"
+                              class="${hasAccess ? "bg-red-50 text-red-700 hover:bg-red-100" : "bg-brand-600 text-white hover:bg-brand-700"} text-xs font-semibold rounded-lg px-3 py-2">
+                        ${hasAccess ? "Revoke" : "Grant"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               `;
             })
@@ -653,25 +808,55 @@
         const courseId = btn.getAttribute("data-course-id");
         const action = btn.getAttribute("data-access-action");
         if (action === "grant") {
-          await grantAccess(selectedStudent.id, courseId);
+          await grantAccess(selectedStudent.id, courseId, accessExpiryFor(courseId, detail));
         } else {
           await revokeAccess(selectedStudent.id, courseId);
         }
         await renderStudentDetail();
       });
     });
+    detail.querySelectorAll("[data-access-duration]").forEach((select) => {
+      select.addEventListener("change", () => {
+        const courseId = select.getAttribute("data-access-duration");
+        const custom = detail.querySelector(`[data-access-custom-date="${courseId}"]`);
+        custom && custom.classList.toggle("hidden", select.value !== "custom");
+      });
+    });
   }
 
-  async function grantAccess(userId, courseId) {
+  function accessExpiryFor(courseId, root) {
+    const select = root.querySelector(`[data-access-duration="${courseId}"]`);
+    const value = select ? select.value : "2m";
+    if (value === "none") return null;
+    if (value === "custom") {
+      const date = root.querySelector(`[data-access-custom-date="${courseId}"]`)?.value;
+      return date ? new Date(`${date}T23:59:59`).toISOString() : null;
+    }
+    const expires = new Date();
+    if (value === "2m") expires.setMonth(expires.getMonth() + 2);
+    if (value === "6m") expires.setMonth(expires.getMonth() + 6);
+    if (value === "1y") expires.setFullYear(expires.getFullYear() + 1);
+    return expires.toISOString();
+  }
+
+  async function grantAccess(userId, courseId, expiresAt) {
     const { error } = await window.MKV_SUPABASE.client.from("enrollments").upsert({
       user_id: userId,
       course_id: courseId,
+      expires_at: expiresAt,
     });
     if (error) {
       window.alert(error.message);
       return;
     }
-    await createNotification(userId, "Course access granted", "An MKV Academy admin has added a course to your dashboard.", "students.html");
+    await createNotification(
+      userId,
+      "Course access granted",
+      expiresAt
+        ? `An MKV Academy admin has added a course to your dashboard until ${new Date(expiresAt).toLocaleDateString()}.`
+        : "An MKV Academy admin has added a course to your dashboard.",
+      "students.html"
+    );
   }
 
   async function revokeAccess(userId, courseId) {
@@ -1034,6 +1219,7 @@
 
     setStatus(`Signed in as ${user.email}`);
     showWorkspace(true);
+    await window.MKV_SUPABASE.client.rpc("revoke_expired_enrollments").catch(() => null);
     await loadCourses();
     await loadAnalytics();
     await loadLessons();
@@ -1053,6 +1239,8 @@
     bindCouponForm();
     const refresh = document.getElementById("admin-refresh");
     refresh && refresh.addEventListener("click", loadLessons);
+    const refreshCourses = document.getElementById("admin-refresh-courses");
+    refreshCourses && refreshCourses.addEventListener("click", loadCourses);
     const refreshLandingVideos = document.getElementById("admin-refresh-landing-videos");
     refreshLandingVideos && refreshLandingVideos.addEventListener("click", loadLandingVideos);
     const refreshAnalytics = document.getElementById("admin-refresh-analytics");
