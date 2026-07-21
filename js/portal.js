@@ -570,6 +570,7 @@
 
   async function initMyCourses() {
     const list = document.getElementById("my-courses-list");
+    const refreshBtn = document.getElementById("student-refresh-courses");
     if (!list) return;
 
     const user = window.MKV_CURRENT_USER;
@@ -578,6 +579,11 @@
       return;
     }
 
+    if (refreshBtn) {
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = "Refreshing...";
+      refreshBtn.classList.add("opacity-70", "cursor-wait");
+    }
     list.innerHTML = `<p class="text-sm text-slate-400 py-4">Loading your paid courses...</p>`;
     try {
       const courses = await getPaidCourses(user.id);
@@ -588,6 +594,12 @@
       loadQuizzes();
     } catch (error) {
       list.innerHTML = emptyState("We could not load your dashboard right now.", error.message);
+    } finally {
+      if (refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = "Refresh";
+        refreshBtn.classList.remove("opacity-70", "cursor-wait");
+      }
     }
   }
 
@@ -862,6 +874,7 @@
     setTimeout(() => {
       bindReferralForm();
       bindProjectReviewForm();
+      document.getElementById("student-refresh-courses")?.addEventListener("click", initMyCourses);
       document.getElementById("student-video-back")?.addEventListener("click", closeVideoPlayer);
       initMyCourses();
       initStudyTimer();

@@ -148,7 +148,10 @@
         <div class="mt-12">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <h2 class="text-xl font-bold text-slate-900">My Courses</h2>
-            <p class="text-xs text-slate-400">Videos and assignments unlock after payment</p>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+              <p class="text-xs text-slate-400">Videos and assignments unlock after payment</p>
+              <button id="student-refresh-courses" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Refresh</button>
+            </div>
           </div>
           <section id="student-video-viewer" class="hidden mt-5 mkv-card overflow-hidden">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 p-4">
