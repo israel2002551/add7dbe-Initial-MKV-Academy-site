@@ -90,11 +90,12 @@ Deno.serve(async (req) => {
 
   if (finalAmount <= 0) {
     const { error: grantError } = await admin.rpc("grant_paid_course_access", {
+      p_user_id: userData.user.id,
+      p_course_id: course.id,
       p_tx_ref: txRef,
       p_transaction_id: `coupon-${Date.now()}`,
       p_amount: 0,
       p_currency: course.currency || "NGN",
-      p_status: "successful",
     });
 
     if (grantError) return json({ error: grantError.message }, 500);

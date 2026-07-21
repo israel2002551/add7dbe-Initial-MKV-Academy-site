@@ -568,6 +568,33 @@
     bindPortalActions(courses);
   }
 
+  async function verifyPaymentReturn() {
+    if (!window.MKV_SUPABASE?.isConfigured || !window.MKV_CURRENT_USER) return null;
+
+    const params = new URLSearchParams(window.location.search);
+    const txRef = params.get("tx_ref") || params.get("txref") || "";
+    const transactionId = params.get("transaction_id") || params.get("id") || "";
+    const status = (params.get("status") || "").toLowerCase();
+    if (!txRef && !transactionId) return null;
+    if (status && status !== "successful" && status !== "completed") return false;
+
+    const list = document.getElementById("my-courses-list");
+    if (list) list.innerHTML = `<p class="text-sm text-slate-400 py-4">Confirming your payment and unlocking your course...</p>`;
+
+    const { data, error } = await window.MKV_SUPABASE.client.functions.invoke("verify-flutterwave-payment", {
+      body: { tx_ref: txRef, transaction_id: transactionId },
+    });
+
+    if (error || !data?.ok) {
+      if (list) list.innerHTML = emptyState("We could not confirm this payment automatically.", error?.message || data?.error || "Please contact support with your payment reference.");
+      return false;
+    }
+
+    const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.hash}`;
+    window.history.replaceState({}, document.title, cleanUrl);
+    return true;
+  }
+
   async function initMyCourses() {
     const list = document.getElementById("my-courses-list");
     const refreshBtn = document.getElementById("student-refresh-courses");
@@ -586,6 +613,8 @@
     }
     list.innerHTML = `<p class="text-sm text-slate-400 py-4">Loading your paid courses...</p>`;
     try {
+      const verifiedPayment = await verifyPaymentReturn();
+      if (verifiedPayment === false) return;
       const courses = await getPaidCourses(user.id);
       renderCourses(courses);
       loadNotifications();
