@@ -53,6 +53,7 @@ create table if not exists public.courses (
   description text,
   price numeric(12,2) not null default 0,
   currency text not null default 'NGN',
+  level text not null default 'All Levels',
   thumbnail_path text,
   is_active boolean not null default true,
   drip_enabled boolean not null default false,
@@ -575,9 +576,11 @@ drop policy if exists "Chat participants send messages" on public.chat_messages;
 drop policy if exists "Students read own submissions" on public.assignment_submissions;
 drop policy if exists "Students submit own assignments" on public.assignment_submissions;
 drop policy if exists "Admins review submissions" on public.assignment_submissions;
+drop policy if exists "Staff delete submissions" on public.assignment_submissions;
 drop policy if exists "Students read own project reviews" on public.project_review_submissions;
 drop policy if exists "Students submit own project reviews" on public.project_review_submissions;
 drop policy if exists "Staff review project submissions" on public.project_review_submissions;
+drop policy if exists "Staff delete project submissions" on public.project_review_submissions;
 drop policy if exists "Anyone can submit leads" on public.lead_submissions;
 drop policy if exists "Admins read leads" on public.lead_submissions;
 drop policy if exists "Students read own notifications" on public.notifications;
@@ -761,6 +764,10 @@ on public.assignment_submissions for update
 using (public.is_staff())
 with check (public.is_staff());
 
+create policy "Staff delete submissions"
+on public.assignment_submissions for delete
+using (public.is_staff());
+
 create policy "Students read own project reviews"
 on public.project_review_submissions for select
 using (user_id = auth.uid() or public.is_staff());
@@ -773,6 +780,10 @@ create policy "Staff review project submissions"
 on public.project_review_submissions for update
 using (public.is_staff())
 with check (public.is_staff());
+
+create policy "Staff delete project submissions"
+on public.project_review_submissions for delete
+using (public.is_staff());
 
 create policy "Anyone can submit leads"
 on public.lead_submissions for insert

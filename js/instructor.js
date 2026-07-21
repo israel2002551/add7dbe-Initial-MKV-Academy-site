@@ -138,7 +138,10 @@
             <p class="mt-1 text-xs text-slate-400">${escapeHtml(submission.user_id)} - ${escapeHtml(submission.course_id)} - ${escapeHtml(submission.status)}</p>
             ${submission.note ? `<p class="mt-2 text-sm text-slate-600">${escapeHtml(submission.note)}</p>` : ""}
           </div>
-          <button type="button" data-download-submission data-bucket="${escapeHtml(submission.file_bucket)}" data-path="${escapeHtml(submission.file_path)}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Download</button>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" data-download-submission data-bucket="${escapeHtml(submission.file_bucket)}" data-path="${escapeHtml(submission.file_path)}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Download</button>
+            <button type="button" data-delete-submission="${escapeHtml(submission.id)}" class="bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold rounded-lg px-4 py-2">Delete</button>
+          </div>
         </div>
         <form data-review-form="${submission.id}" class="mt-4 grid md:grid-cols-4 gap-3">
           <select name="status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
@@ -165,6 +168,22 @@
           return;
         }
         window.open(data.signedUrl, "_blank", "noopener");
+      });
+    });
+
+    document.querySelectorAll("[data-delete-submission]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!window.confirm("Delete this student submission?")) return;
+        const { error } = await window.MKV_SUPABASE.client
+          .from("assignment_submissions")
+          .delete()
+          .eq("id", btn.getAttribute("data-delete-submission"));
+        if (error) {
+          message(error.message, "error");
+          return;
+        }
+        message("Submission deleted.", "success");
+        await loadSubmissions();
       });
     });
 

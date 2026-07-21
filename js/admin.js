@@ -82,7 +82,7 @@
 
     const { data, error } = await window.MKV_SUPABASE.client
       .from("courses")
-      .select("id, title, description, price, currency, thumbnail_path, is_active")
+      .select("*")
       .eq("is_active", true)
       .order("title", { ascending: true });
 
@@ -108,6 +108,7 @@
             <p class="font-semibold text-slate-900">${escapeHtml(course.title)}</p>
             <p class="mt-1 text-xs text-slate-400">${escapeHtml(course.id)}</p>
             <p class="mt-2 text-sm font-bold text-brand-700">${formatMoney(course.price, course.currency)}</p>
+            <p class="mt-1 text-xs font-semibold text-slate-500">${escapeHtml(course.level || "All Levels")}</p>
           </div>
           <div class="flex flex-wrap gap-2">
             <button type="button" data-edit-course="${course.id}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg px-3 py-2">Edit Course</button>
@@ -136,6 +137,7 @@
     form.elements.description.value = course.description || "";
     form.elements.price.value = course.price || 0;
     form.elements.currency.value = course.currency || "NGN";
+    form.elements.level.value = course.level || "All Levels";
     if (form.elements.thumbnail) form.elements.thumbnail.value = "";
     cancelBtn && cancelBtn.classList.remove("hidden");
     form.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -601,6 +603,7 @@
           description: formData.get("description"),
           price: Number(formData.get("price") || 0),
           currency: formData.get("currency") || "NGN",
+          level: formData.get("level") || "All Levels",
           is_active: true,
         };
         if (thumbnailPath) {
@@ -1183,6 +1186,14 @@
       });
     });
 
+    list.querySelectorAll("[data-delete-assignment-submission]").forEach((btn) => {
+      btn.addEventListener("click", () => deleteAssignmentSubmission(btn.getAttribute("data-delete-assignment-submission")));
+    });
+
+    list.querySelectorAll("[data-delete-project-review]").forEach((btn) => {
+      btn.addEventListener("click", () => deleteProjectReview(btn.getAttribute("data-delete-project-review")));
+    });
+
     list.querySelectorAll("[data-review-form]").forEach((form) => {
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -1232,6 +1243,7 @@
                 <div class="flex flex-wrap gap-2">
                   <button type="button" data-download-submission data-bucket="${item.image_bucket}" data-path="${item.image_path}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Image</button>
                   <button type="button" data-download-submission data-bucket="${item.cad_bucket}" data-path="${item.cad_path}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">CAD</button>
+                  <button type="button" data-delete-project-review="${item.id}" class="bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold rounded-lg px-4 py-2">Delete</button>
                 </div>
               </div>
               <form data-project-review-form="${item.id}" data-user-id="${item.user_id}" class="mt-4 grid md:grid-cols-3 gap-3">
@@ -1280,7 +1292,10 @@
             <p class="mt-1 text-xs text-slate-400">${submission.user_id} - ${submission.course_id}</p>
             ${submission.note ? `<p class="mt-2 text-sm text-slate-600">${submission.note}</p>` : ""}
           </div>
-          <button type="button" data-download-submission data-bucket="${submission.file_bucket}" data-path="${submission.file_path}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Download</button>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" data-download-submission data-bucket="${submission.file_bucket}" data-path="${submission.file_path}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Download</button>
+            <button type="button" data-delete-assignment-submission="${submission.id}" class="bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold rounded-lg px-4 py-2">Delete</button>
+          </div>
         </div>
         <form data-review-form="${submission.id}" data-user-id="${submission.user_id}" class="mt-4 grid md:grid-cols-4 gap-3">
           <select name="status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
@@ -1292,6 +1307,32 @@
         </form>
       </article>
     `;
+  }
+
+  async function deleteAssignmentSubmission(submissionId) {
+    if (!submissionId || !window.confirm("Delete this assignment submission?")) return;
+    const { error } = await window.MKV_SUPABASE.client
+      .from("assignment_submissions")
+      .delete()
+      .eq("id", submissionId);
+    if (error) {
+      window.alert(error.message);
+      return;
+    }
+    await loadSubmissions();
+  }
+
+  async function deleteProjectReview(reviewId) {
+    if (!reviewId || !window.confirm("Delete this project review submission?")) return;
+    const { error } = await window.MKV_SUPABASE.client
+      .from("project_review_submissions")
+      .delete()
+      .eq("id", reviewId);
+    if (error) {
+      window.alert(error.message);
+      return;
+    }
+    await loadSubmissions();
   }
 
   async function initAdmin() {
