@@ -68,6 +68,22 @@
     `;
   }
 
+  function formatMoney(amount, currency) {
+    if (amount === null || amount === undefined || amount === "") return "Price TBA";
+    const value = Number(amount || 0);
+    const code = currency || "NGN";
+    if (value <= 0) return "Free";
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: code,
+        maximumFractionDigits: value % 1 === 0 ? 0 : 2,
+      }).format(value);
+    } catch (error) {
+      return `${code} ${value.toLocaleString()}`;
+    }
+  }
+
   function courseCardMarkup(course) {
     const highlights = course.highlights && course.highlights.length ? course.highlights : ["Private student dashboard", "Lesson videos and assignments", "Progress tracking after enrollment"];
     const thumbnail = course.thumbnailUrl
@@ -95,8 +111,9 @@
               <p class="mt-2 text-sm leading-relaxed text-slate-600">${course.description}</p>
             </div>
             <div class="shrink-0 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-right">
-              <p class="text-[11px] font-semibold uppercase text-slate-400">Level</p>
-              <p class="mt-1 text-sm font-bold text-slate-900">${course.level}</p>
+              <p class="text-[11px] font-semibold uppercase text-slate-400">Price</p>
+              <p class="mt-1 text-lg font-extrabold text-slate-900">${formatMoney(course.price, course.currency)}</p>
+              <p class="mt-1 text-[11px] font-semibold uppercase text-slate-400">${course.level}</p>
             </div>
           </div>
           <ul class="mt-5 grid gap-2 sm:grid-cols-2">
@@ -278,7 +295,7 @@
       thumbnailUrl: getCourseThumbnailUrl(course),
       description: course.description || "A practical MKV Academy course with private lessons and assignments.",
       highlights: course.highlights || [],
-      price: course.price || 0,
+      price: course.price ?? null,
       currency: course.currency || "NGN",
       lectures: course.lectures || [],
     };

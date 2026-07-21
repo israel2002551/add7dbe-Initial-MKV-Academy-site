@@ -8,6 +8,7 @@
   let selectedStudent = null;
   let selectedInstructor = null;
   let referralEmailsCache = [];
+  let editingCourseId = "";
 
   function isAdmin(user) {
     const role = user && user.profile && user.profile.role;
@@ -40,6 +41,20 @@
     })[char]);
   }
 
+  function formatMoney(amount, currency) {
+    const value = Number(amount || 0);
+    const code = currency || "NGN";
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: code,
+        maximumFractionDigits: value % 1 === 0 ? 0 : 2,
+      }).format(value);
+    } catch (error) {
+      return `${code} ${value.toLocaleString()}`;
+    }
+  }
+
   function showWorkspace(allowed) {
     const denied = document.getElementById("admin-denied");
     const workspace = document.getElementById("admin-workspace");
@@ -67,7 +82,7 @@
 
     const { data, error } = await window.MKV_SUPABASE.client
       .from("courses")
-      .select("id, title")
+      .select("id, title, description, price, currency, thumbnail_path, is_active")
       .eq("is_active", true)
       .order("title", { ascending: true });
 
@@ -92,14 +107,49 @@
           <div>
             <p class="font-semibold text-slate-900">${escapeHtml(course.title)}</p>
             <p class="mt-1 text-xs text-slate-400">${escapeHtml(course.id)}</p>
+            <p class="mt-2 text-sm font-bold text-brand-700">${formatMoney(course.price, course.currency)}</p>
           </div>
-          <button type="button" data-delete-course="${course.id}" class="bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg px-3 py-2">Delete Course</button>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" data-edit-course="${course.id}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg px-3 py-2">Edit Course</button>
+            <button type="button" data-delete-course="${course.id}" class="bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg px-3 py-2">Delete Course</button>
+          </div>
         </div>
       `).join("")
       : `<p class="py-4 text-sm text-slate-400">No active courses yet.</p>`;
+    list.querySelectorAll("[data-edit-course]").forEach((btn) => {
+      btn.addEventListener("click", () => startCourseEdit(adminCourses.find((course) => course.id === btn.getAttribute("data-edit-course"))));
+    });
     list.querySelectorAll("[data-delete-course]").forEach((btn) => {
       btn.addEventListener("click", () => deleteCourse(btn.getAttribute("data-delete-course")));
     });
+  }
+
+  function startCourseEdit(course) {
+    const form = document.getElementById("admin-course-form");
+    const cancelBtn = document.getElementById("admin-course-cancel-edit");
+    if (!form || !course) return;
+    editingCourseId = course.id;
+    form.elements.title.value = course.title || "";
+    form.elements.id.value = course.id || "";
+    form.elements.id.readOnly = true;
+    form.elements.id.classList.add("bg-slate-100", "text-slate-500");
+    form.elements.description.value = course.description || "";
+    form.elements.price.value = course.price || 0;
+    form.elements.currency.value = course.currency || "NGN";
+    if (form.elements.thumbnail) form.elements.thumbnail.value = "";
+    cancelBtn && cancelBtn.classList.remove("hidden");
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function resetCourseForm() {
+    const form = document.getElementById("admin-course-form");
+    const cancelBtn = document.getElementById("admin-course-cancel-edit");
+    if (!form) return;
+    editingCourseId = "";
+    form.reset();
+    form.elements.id.readOnly = false;
+    form.elements.id.classList.remove("bg-slate-100", "text-slate-500");
+    cancelBtn && cancelBtn.classList.add("hidden");
   }
 
   async function deleteCourse(courseId) {
@@ -542,7 +592,7 @@
       try {
         const formData = new FormData(form);
         const title = formData.get("title");
-        const id = formData.get("id") || window.MKV_SUPABASE.slugify(title);
+        const id = editingCourseId || formData.get("id") || window.MKV_SUPABASE.slugify(title);
         const thumbnail = formData.get("thumbnail");
         const thumbnailPath = thumbnail && thumbnail.size ? await uploadFile("course-thumbnails", id, thumbnail) : "";
         const payload = {
@@ -560,8 +610,8 @@
         const { error } = await window.MKV_SUPABASE.client.from("courses").upsert(payload);
         if (error) throw error;
 
-        setMessage("Course saved.", "success");
-        form.reset();
+        setMessage(editingCourseId ? "Course updated." : "Course saved.", "success");
+        resetCourseForm();
         await loadCourses();
       } catch (error) {
         setMessage(error.message, "error");
@@ -1290,6 +1340,8 @@
     bindLessonForm();
     bindLandingVideoForm();
     bindCouponForm();
+    const cancelCourseEdit = document.getElementById("admin-course-cancel-edit");
+    cancelCourseEdit && cancelCourseEdit.addEventListener("click", resetCourseForm);
     const refreshLessonUploadBtn = document.getElementById("admin-refresh-lesson-upload");
     refreshLessonUploadBtn && refreshLessonUploadBtn.addEventListener("click", refreshLessonUpload);
     const refresh = document.getElementById("admin-refresh");
