@@ -185,7 +185,10 @@ select:-webkit-autofill {
 }
 
 #mobile-nav.open {
-  max-height: 480px;
+  max-height: calc(100vh - 5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* --------------------------------------------------------------------------
