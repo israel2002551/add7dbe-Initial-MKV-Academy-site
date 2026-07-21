@@ -85,7 +85,11 @@
       return LOCAL_PREVIEW_COURSES;
     }
 
-    await supa.client.rpc("revoke_expired_enrollments").catch(() => null);
+    try {
+      await supa.client.rpc("revoke_expired_enrollments");
+    } catch (error) {
+      console.warn("Could not revoke expired enrollments", error);
+    }
 
     const { data: enrollments, error: enrollmentError } = await supa.client
       .from("enrollments")

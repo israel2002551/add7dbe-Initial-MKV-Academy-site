@@ -1219,7 +1219,11 @@
 
     setStatus(`Signed in as ${user.email}`);
     showWorkspace(true);
-    await window.MKV_SUPABASE.client.rpc("revoke_expired_enrollments").catch(() => null);
+    try {
+      await window.MKV_SUPABASE.client.rpc("revoke_expired_enrollments");
+    } catch (error) {
+      console.warn("Could not revoke expired enrollments", error);
+    }
     await loadCourses();
     await loadAnalytics();
     await loadLessons();
