@@ -73,10 +73,10 @@
               <select name="course_id" id="instructor-course-select" required class="w-full rounded-lg border border-slate-200 px-4 py-3"></select>
               <input name="title" required placeholder="Quiz title" class="w-full rounded-lg border border-slate-200 px-4 py-3" />
               <input name="pass_mark" type="number" min="0" max="100" value="70" class="w-40 rounded-lg border border-slate-200 px-4 py-3" />
-              <textarea name="question" required rows="2" placeholder="First question" class="w-full rounded-lg border border-slate-200 px-4 py-3"></textarea>
+              <textarea name="question" rows="2" placeholder="Optional first question" class="w-full rounded-lg border border-slate-200 px-4 py-3"></textarea>
               <div class="grid md:grid-cols-2 gap-3">
-                <input name="option_a" required placeholder="Correct option" class="rounded-lg border border-slate-200 px-4 py-3" />
-                <input name="option_b" required placeholder="Wrong option" class="rounded-lg border border-slate-200 px-4 py-3" />
+                <input name="option_a" placeholder="Correct option (optional)" class="rounded-lg border border-slate-200 px-4 py-3" />
+                <input name="option_b" placeholder="Wrong option (optional)" class="rounded-lg border border-slate-200 px-4 py-3" />
               </div>
               <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-6 py-3">Save Quiz</button>
             </form>

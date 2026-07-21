@@ -7,6 +7,7 @@
   let adminCourses = [];
   let selectedStudent = null;
   let selectedInstructor = null;
+  let referralEmailsCache = [];
 
   function isAdmin(user) {
     const role = user && user.profile && user.profile.role;
@@ -45,6 +46,7 @@
     const lessons = document.getElementById("admin-lessons-panel");
     const landingVideos = document.getElementById("admin-landing-videos-panel");
     const coupons = document.getElementById("admin-coupons-panel");
+    const referrals = document.getElementById("admin-referrals-panel");
     const students = document.getElementById("admin-students-panel");
     const instructors = document.getElementById("admin-instructors-panel");
     const submissions = document.getElementById("admin-submissions-panel");
@@ -53,6 +55,7 @@
     lessons && lessons.classList.toggle("hidden", !allowed);
     landingVideos && landingVideos.classList.toggle("hidden", !allowed);
     coupons && coupons.classList.toggle("hidden", !allowed);
+    referrals && referrals.classList.toggle("hidden", !allowed);
     students && students.classList.toggle("hidden", !allowed);
     instructors && instructors.classList.toggle("hidden", !allowed);
     submissions && submissions.classList.toggle("hidden", !allowed);
@@ -84,9 +87,9 @@
 
     const { data, error } = await window.MKV_SUPABASE.client
       .from("lessons")
-      .select("id, title, course_id, chapter_title, description, video_provider, video_path, stream_embed_url, assignment_path, sort_order, created_at")
+      .select("id, title, course_id, chapter_title, chapter_order, description, video_provider, video_path, stream_embed_url, assignment_path, resource_path, sort_order, created_at")
       .order("course_id", { ascending: true })
-      .order("chapter_title", { ascending: true })
+      .order("chapter_order", { ascending: true })
       .order("sort_order", { ascending: true });
 
     if (error) {
@@ -112,30 +115,32 @@
       const course = adminCourses.find((item) => item.id === lesson.course_id);
       const courseTitle = course ? course.title : lesson.course_id;
       const chapter = lesson.chapter_title || "General";
+      const chapterOrder = Number(lesson.chapter_order || 1);
       if (!courses.has(courseTitle)) courses.set(courseTitle, new Map());
       const chapters = courses.get(courseTitle);
-      if (!chapters.has(chapter)) chapters.set(chapter, []);
-      chapters.get(chapter).push(lesson);
+      if (!chapters.has(chapter)) chapters.set(chapter, { order: chapterOrder, rows: [] });
+      chapters.get(chapter).rows.push(lesson);
     });
 
     return [...courses.entries()].map(([courseTitle, chapters]) => `
       <div class="py-5">
         <h3 class="font-bold text-slate-900">${escapeHtml(courseTitle)}</h3>
         <div class="mt-3 space-y-3">
-          ${[...chapters.entries()].map(([chapter, rows]) => `
+          ${[...chapters.entries()].sort((a, b) => a[1].order - b[1].order).map(([chapter, group]) => `
             <div class="rounded-lg border border-slate-100 bg-slate-50 p-4">
-              <p class="text-xs font-technical uppercase text-slate-400">${escapeHtml(chapter)}</p>
+              <p class="text-xs font-technical uppercase text-slate-400">Chapter ${group.order}: ${escapeHtml(chapter)}</p>
               <div class="mt-2 divide-y divide-slate-200">
-                ${rows.map((lesson) => `
+                ${group.rows.map((lesson) => `
                   <div class="py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div>
                       <p class="font-semibold text-slate-900">${escapeHtml(lesson.title)}</p>
-                      <p class="text-xs text-slate-400">Order ${lesson.sort_order || 0}</p>
+                      <p class="text-xs text-slate-400">Lesson ${lesson.sort_order || 0}</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 text-xs">
                       ${lesson.video_path ? `<span class="bg-brand-50 text-brand-700 px-2.5 py-1 rounded-full">video saved</span>` : ""}
                       ${lesson.stream_embed_url ? `<span class="bg-cyan-50 text-cyan-700 px-2.5 py-1 rounded-full">${escapeHtml(lesson.video_provider)} stream</span>` : ""}
                       ${lesson.assignment_path ? `<span class="bg-white text-slate-600 px-2.5 py-1 rounded-full">assignment saved</span>` : ""}
+                      ${lesson.resource_path ? `<span class="bg-white text-slate-600 px-2.5 py-1 rounded-full">resource saved</span>` : ""}
                       <button type="button" data-edit-lesson="${lesson.id}" class="bg-white hover:bg-slate-100 text-slate-700 font-semibold rounded-lg px-3 py-2">Edit</button>
                       <button type="button" data-delete-lesson="${lesson.id}" class="bg-red-50 hover:bg-red-100 text-red-700 font-semibold rounded-lg px-3 py-2">Delete</button>
                     </div>
@@ -156,6 +161,7 @@
     form.elements.course_id.value = lesson.course_id;
     form.elements.title.value = lesson.title || "";
     form.elements.chapter_title.value = lesson.chapter_title || "";
+    form.elements.chapter_order.value = lesson.chapter_order || 1;
     form.elements.description.value = lesson.description || "";
     form.elements.video_provider.value = lesson.video_provider || "storage";
     form.elements.stream_embed_url.value = lesson.stream_embed_url || "";
@@ -304,6 +310,90 @@
     return path;
   }
 
+  async function loadReferralAnalytics() {
+    const summary = document.getElementById("admin-referrals-summary");
+    const list = document.getElementById("admin-referrals-list");
+    if (!summary || !list || !window.MKV_SUPABASE?.client) return;
+
+    const { data, error } = await window.MKV_SUPABASE.client
+      .from("referrals")
+      .select("id, referrer_id, referred_email, referred_user_id, status, reward_status, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      list.innerHTML = `<p class="py-4 text-sm text-red-600">${escapeHtml(error.message)}</p>`;
+      return;
+    }
+
+    const rows = data || [];
+    const referrerIds = [...new Set(rows.map((row) => row.referrer_id).filter(Boolean))];
+    let profileMap = new Map();
+    if (referrerIds.length) {
+      const { data: profiles } = await window.MKV_SUPABASE.client
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", referrerIds);
+      profileMap = new Map((profiles || []).map((profile) => [profile.id, profile]));
+    }
+    referralEmailsCache = [...new Set(rows.map((row) => row.referred_email).filter(Boolean))];
+    const referrers = new Map();
+    rows.forEach((row) => {
+      const key = row.referrer_id || "unknown";
+      const profile = profileMap.get(row.referrer_id);
+      if (!referrers.has(key)) {
+        referrers.set(key, {
+          id: key,
+          name: profile?.full_name || "Unknown referrer",
+          email: profile?.email || "",
+          referrals: [],
+        });
+      }
+      referrers.get(key).referrals.push(row);
+    });
+
+    summary.innerHTML = [
+      ["Total Referrals", rows.length],
+      ["Referrers", referrers.size],
+      ["Unique Emails", referralEmailsCache.length],
+    ].map(([label, value]) => `<div class="rounded-lg border border-slate-100 bg-slate-50 p-4"><p class="text-xs font-technical uppercase text-slate-400">${label}</p><p class="mt-2 text-2xl font-extrabold text-slate-900">${value}</p></div>`).join("");
+
+    list.innerHTML = referrers.size
+      ? [...referrers.values()].map((referrer) => `
+        <article class="py-5">
+          <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <div>
+              <p class="font-semibold text-slate-900">${escapeHtml(referrer.name)}</p>
+              <p class="mt-1 text-xs text-slate-400">${escapeHtml(referrer.email || referrer.id)}</p>
+            </div>
+            <span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">${referrer.referrals.length} referral${referrer.referrals.length === 1 ? "" : "s"}</span>
+          </div>
+          <div class="mt-4 overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="text-xs uppercase text-slate-400"><tr><th class="py-2 pr-4">Referee Email</th><th class="py-2 pr-4">Status</th><th class="py-2">Reward</th></tr></thead>
+              <tbody class="divide-y divide-slate-100">
+                ${referrer.referrals.map((row) => `<tr><td class="py-2 pr-4 text-slate-700">${escapeHtml(row.referred_email || "No email")}</td><td class="py-2 pr-4 text-slate-500">${escapeHtml(row.status || "pending")}</td><td class="py-2 text-slate-500">${escapeHtml(row.reward_status || "none")}</td></tr>`).join("")}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      `).join("")
+      : `<p class="py-4 text-sm text-slate-400">No referrals yet.</p>`;
+  }
+
+  async function copyReferralEmails() {
+    const text = referralEmailsCache.join(", ");
+    if (!text) {
+      setMessage("No referral emails to copy yet.", "error");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setMessage("Referral emails copied.", "success");
+    } catch (error) {
+      window.prompt("Copy referral emails", text);
+    }
+  }
+
   function bindCourseForm() {
     const form = document.getElementById("admin-course-form");
     if (!form) return;
@@ -314,6 +404,8 @@
         const formData = new FormData(form);
         const title = formData.get("title");
         const id = formData.get("id") || window.MKV_SUPABASE.slugify(title);
+        const thumbnail = formData.get("thumbnail");
+        const thumbnailPath = thumbnail && thumbnail.size ? await uploadFile("course-thumbnails", id, thumbnail) : "";
         const payload = {
           id,
           title,
@@ -322,6 +414,9 @@
           currency: formData.get("currency") || "NGN",
           is_active: true,
         };
+        if (thumbnailPath) {
+          payload.thumbnail_path = thumbnailPath;
+        }
 
         const { error } = await window.MKV_SUPABASE.client.from("courses").upsert(payload);
         if (error) throw error;
@@ -348,18 +443,22 @@
         const videoProvider = formData.get("video_provider") || "storage";
         const video = formData.get("video");
         const assignment = formData.get("assignment");
+        const resource = formData.get("resource");
 
         setMessage("Uploading files. Please keep this tab open.", "success");
 
         const videoPath = video && video.size ? await uploadFile("course-videos", courseId, video) : "";
         const assignmentPath =
           assignment && assignment.size ? await uploadFile("course-assignments", courseId, assignment) : "";
+        const resourcePath =
+          resource && resource.size ? await uploadFile("course-materials", courseId, resource) : "";
 
         const lessonId = formData.get("lesson_id");
         const payload = {
           course_id: courseId,
           title: formData.get("title"),
           chapter_title: formData.get("chapter_title") || "General",
+          chapter_order: Number(formData.get("chapter_order") || 1),
           description: formData.get("description"),
           video_provider: videoProvider,
           video_bucket: "course-videos",
@@ -368,12 +467,15 @@
           stream_embed_url: formData.get("stream_embed_url") || "",
           assignment_bucket: "course-assignments",
           assignment_path: assignmentPath,
+          resource_bucket: "course-materials",
+          resource_path: resourcePath,
           sort_order: Number(formData.get("sort_order") || 0),
           created_by: user && user.id,
         };
         if (lessonId) {
           if (!videoPath) delete payload.video_path;
           if (!assignmentPath) delete payload.assignment_path;
+          if (!resourcePath) delete payload.resource_path;
         }
         const { error } = lessonId
           ? await window.MKV_SUPABASE.client.from("lessons").update(payload).eq("id", lessonId)
@@ -485,6 +587,7 @@
         <button type="button" data-student-id="${student.id}" class="w-full text-left p-4 hover:bg-slate-50">
           <span class="block text-sm font-semibold text-slate-900">${student.full_name || "Unnamed student"}</span>
           <span class="block mt-1 text-xs text-slate-400">${student.email || student.id}</span>
+          <span class="block mt-1 text-[11px] font-technical text-slate-400">Student ID: ${student.id}</span>
           <span class="inline-block mt-2 text-[11px] font-technical text-slate-400">${student.role}</span>
         </button>`
           )
@@ -519,6 +622,7 @@
         <div>
           <h3 class="text-lg font-bold text-slate-900">${selectedStudent.full_name || "Unnamed student"}</h3>
           <p class="mt-1 text-sm text-slate-500">${selectedStudent.email || selectedStudent.id}</p>
+          <p class="mt-1 text-xs font-technical text-slate-400">Student ID: ${selectedStudent.id}</p>
         </div>
         <span class="text-xs font-technical text-slate-400">${selectedStudent.role}</span>
       </div>
@@ -935,6 +1039,7 @@
     await loadLessons();
     await loadLandingVideos();
     await loadCoupons();
+    await loadReferralAnalytics();
     await loadStudents();
     await loadInstructorUsers();
     await loadSubmissions();
@@ -952,6 +1057,10 @@
     refreshLandingVideos && refreshLandingVideos.addEventListener("click", loadLandingVideos);
     const refreshAnalytics = document.getElementById("admin-refresh-analytics");
     refreshAnalytics && refreshAnalytics.addEventListener("click", loadAnalytics);
+    const refreshReferrals = document.getElementById("admin-refresh-referrals");
+    refreshReferrals && refreshReferrals.addEventListener("click", loadReferralAnalytics);
+    const copyReferralEmailsBtn = document.getElementById("admin-copy-referral-emails");
+    copyReferralEmailsBtn && copyReferralEmailsBtn.addEventListener("click", copyReferralEmails);
     const refreshSubmissions = document.getElementById("admin-refresh-submissions");
     refreshSubmissions && refreshSubmissions.addEventListener("click", loadSubmissions);
     const studentSearch = document.getElementById("admin-student-search");

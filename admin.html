@@ -119,6 +119,11 @@
                 <label class="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
                 <textarea name="description" rows="4" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600"></textarea>
               </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Course Thumbnail</label>
+                <input name="thumbnail" type="file" accept="image/*" class="w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-brand-700 file:font-semibold" />
+                <p class="mt-1 text-xs text-slate-400">Shown on the public courses page.</p>
+              </div>
               <div class="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label class="block text-sm font-medium text-slate-700 mb-1.5">Price</label>
@@ -144,9 +149,15 @@
                 <label class="block text-sm font-medium text-slate-700 mb-1.5">Lesson Title</label>
                 <input name="title" required placeholder="Lecture 1: Introduction" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
               </div>
-              <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1.5">Chapter</label>
-                <input name="chapter_title" placeholder="Chapter 1: Foundations" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+              <div class="grid sm:grid-cols-[1fr_140px] gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1.5">Chapter</label>
+                  <input name="chapter_title" required placeholder="Chapter 1: Foundations" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1.5">Chapter Order</label>
+                  <input name="chapter_order" type="number" min="1" value="1" class="w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+                </div>
               </div>
               <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
@@ -176,10 +187,14 @@
                   <label class="block text-sm font-medium text-slate-700 mb-1.5">Assignment File</label>
                   <input name="assignment" type="file" class="w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-slate-700 file:font-semibold" />
                 </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1.5">Resource File</label>
+                  <input name="resource" type="file" class="w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-slate-700 file:font-semibold" />
+                </div>
               </div>
               <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1.5">Sort Order</label>
-                <input name="sort_order" type="number" min="0" value="1" class="w-full sm:w-32 rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Lesson Order In Chapter</label>
+                <input name="sort_order" type="number" min="1" value="1" class="w-full sm:w-48 rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
               </div>
             <input type="hidden" name="lesson_id" />
             <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-6 py-3 shadow-lg shadow-brand-600/25 transition-all">Save Lesson</button>
@@ -253,6 +268,21 @@
             <button class="bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-3">Save Coupon</button>
           </form>
           <div id="admin-coupons-list" class="mt-5 divide-y divide-slate-100"></div>
+        </section>
+
+        <section id="admin-referrals-panel" class="hidden mt-8 mkv-card p-6">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Referral Analytics</h2>
+              <p class="mt-1 text-sm text-slate-500">Track student advocates and copy referred emails for outreach.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button id="admin-copy-referral-emails" type="button" class="bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg px-4 py-2">Copy Emails</button>
+              <button id="admin-refresh-referrals" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Refresh</button>
+            </div>
+          </div>
+          <div id="admin-referrals-summary" class="mt-5 grid sm:grid-cols-3 gap-4"></div>
+          <div id="admin-referrals-list" class="mt-5 divide-y divide-slate-100"></div>
         </section>
 
         <section id="admin-students-panel" class="hidden mt-8 mkv-card p-6">

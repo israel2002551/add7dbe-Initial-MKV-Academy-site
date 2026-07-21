@@ -69,7 +69,18 @@
   function initExternalLinks() {
     const cfg = window.MKV_SUPABASE_CONFIG || {};
     const whatsappUrl = cfg.WHATSAPP_URL || "https://wa.link/qnw9ai";
-    document.querySelectorAll("#whatsapp-float, [data-whatsapp-link]").forEach((link) => {
+    const whatsappCommunityUrl = cfg.WHATSAPP_COMMUNITY_URL || whatsappUrl;
+    document.querySelectorAll("#whatsapp-float").forEach((link) => {
+      link.setAttribute("href", whatsappUrl);
+      link.setAttribute("target", "_blank");
+      link.setAttribute("rel", "noopener");
+    });
+    document.querySelectorAll("[data-whatsapp-link]").forEach((link) => {
+      link.setAttribute("href", whatsappCommunityUrl);
+      link.setAttribute("target", "_blank");
+      link.setAttribute("rel", "noopener");
+    });
+    document.querySelectorAll("[data-whatsapp-direct-link]").forEach((link) => {
       link.setAttribute("href", whatsappUrl);
       link.setAttribute("target", "_blank");
       link.setAttribute("rel", "noopener");
@@ -82,11 +93,80 @@
     });
   }
 
+  const TRANSLATIONS = {
+    fr: {
+      "Home": "Accueil",
+      "Courses": "Cours",
+      "Services": "Services",
+      "About": "A propos",
+      "Community": "Communaute",
+      "Chat": "Chat",
+      "Contact": "Contact",
+      "Student Login": "Connexion etudiant",
+      "My Portal": "Mon portail",
+      "Admin": "Admin",
+      "Instructor": "Formateur",
+      "Instructor Dashboard": "Tableau formateur",
+      "Talk to Someone": "Parler a quelqu'un",
+      "Log Out": "Deconnexion",
+      "Explore Courses": "Explorer les cours",
+      "View All Courses": "Voir tous les cours",
+      "Preview": "Apercu",
+      "Enroll Now": "S'inscrire",
+      "Coming Soon": "Bientot disponible",
+      "Messages": "Messages",
+      "Conversations": "Conversations",
+      "New Conversation": "Nouvelle conversation",
+      "Delete": "Supprimer",
+      "Send": "Envoyer",
+      "Community options": "Options communaute",
+      "Check Community": "Voir communaute",
+      "Join the Meeting": "Rejoindre la reunion",
+    },
+  };
+
+  function initLanguageToggle() {
+    const selects = [...document.querySelectorAll("[data-language-toggle]")];
+    if (!selects.length) return;
+    let lang = "en";
+    try {
+      lang = localStorage.getItem("mkv-language") || "en";
+    } catch (e) {
+      /* ignore */
+    }
+    selects.forEach((select) => {
+      select.value = lang;
+    });
+
+    function applyLanguage(nextLang) {
+      document.documentElement.lang = nextLang;
+      selects.forEach((select) => {
+        select.value = nextLang;
+      });
+      const dictionary = TRANSLATIONS[nextLang] || {};
+      document.querySelectorAll("[data-i18n]").forEach((el) => {
+        const original = el.getAttribute("data-i18n");
+        el.textContent = dictionary[original] || original;
+      });
+      try {
+        localStorage.setItem("mkv-language", nextLang);
+      } catch (e) {
+        /* ignore */
+      }
+    }
+
+    selects.forEach((select) => {
+      select.addEventListener("change", () => applyLanguage(select.value));
+    });
+    applyLanguage(lang);
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     initLoadingScreen();
     initScrollProgress();
     initBackToTop();
     initCookieBanner();
     initExternalLinks();
+    initLanguageToggle();
   });
 })();

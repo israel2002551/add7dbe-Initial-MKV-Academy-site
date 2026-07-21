@@ -1,6 +1,7 @@
 -- MKV Academy Supabase starter schema
 -- Run this in Supabase SQL Editor, then create private Storage buckets:
 -- course-videos, course-assignments, course-materials.
+-- Course thumbnails are public because they appear on the public catalog.
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -64,6 +65,7 @@ create table if not exists public.lessons (
   course_id text not null references public.courses(id) on delete cascade,
   title text not null,
   chapter_title text not null default 'General',
+  chapter_order integer not null default 1,
   description text,
   video_provider text not null default 'storage' check (video_provider in ('storage', 'bunny', 'cloudflare', 'mux', 'youtube', 'external')),
   video_bucket text default 'course-videos',
@@ -72,6 +74,8 @@ create table if not exists public.lessons (
   stream_embed_url text,
   assignment_bucket text default 'course-assignments',
   assignment_path text,
+  resource_bucket text default 'course-materials',
+  resource_path text,
   sort_order integer not null default 0,
   unlock_after_days integer not null default 0,
   created_by uuid references auth.users(id),
@@ -79,6 +83,9 @@ create table if not exists public.lessons (
 );
 
 alter table public.lessons add column if not exists chapter_title text not null default 'General';
+alter table public.lessons add column if not exists chapter_order integer not null default 1;
+alter table public.lessons add column if not exists resource_bucket text default 'course-materials';
+alter table public.lessons add column if not exists resource_path text;
 
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
@@ -875,6 +882,7 @@ values
   ('course-videos', 'course-videos', false),
   ('course-assignments', 'course-assignments', false),
   ('course-materials', 'course-materials', false),
+  ('course-thumbnails', 'course-thumbnails', true),
   ('assignment-submissions', 'assignment-submissions', false),
   ('project-review-submissions', 'project-review-submissions', false),
   ('welcome-videos', 'welcome-videos', true)
@@ -887,23 +895,25 @@ drop policy if exists "Admins upload welcome videos" on storage.objects;
 drop policy if exists "Admins update welcome videos" on storage.objects;
 drop policy if exists "Admins delete welcome videos" on storage.objects;
 drop policy if exists "Anyone can read welcome videos" on storage.objects;
+drop policy if exists "Anyone can read course thumbnails" on storage.objects;
 drop policy if exists "Students upload own submissions" on storage.objects;
 drop policy if exists "Students read own submissions files" on storage.objects;
 drop policy if exists "Enrolled students read paid videos" on storage.objects;
 drop policy if exists "Enrolled students read paid assignments" on storage.objects;
+drop policy if exists "Enrolled students read course materials" on storage.objects;
 
 create policy "Admins upload course videos"
 on storage.objects for insert
-with check (bucket_id in ('course-videos', 'course-assignments', 'course-materials', 'assignment-submissions') and public.is_admin());
+with check (bucket_id in ('course-videos', 'course-assignments', 'course-materials', 'assignment-submissions', 'course-thumbnails') and public.is_admin());
 
 create policy "Admins update course files"
 on storage.objects for update
-using (bucket_id in ('course-videos', 'course-assignments', 'course-materials', 'assignment-submissions') and public.is_admin())
-with check (bucket_id in ('course-videos', 'course-assignments', 'course-materials', 'assignment-submissions') and public.is_admin());
+using (bucket_id in ('course-videos', 'course-assignments', 'course-materials', 'assignment-submissions', 'course-thumbnails') and public.is_admin())
+with check (bucket_id in ('course-videos', 'course-assignments', 'course-materials', 'assignment-submissions', 'course-thumbnails') and public.is_admin());
 
 create policy "Admins delete course files"
 on storage.objects for delete
-using (bucket_id in ('course-videos', 'course-assignments', 'course-materials', 'assignment-submissions') and public.is_admin());
+using (bucket_id in ('course-videos', 'course-assignments', 'course-materials', 'assignment-submissions', 'course-thumbnails') and public.is_admin());
 
 create policy "Admins upload welcome videos"
 on storage.objects for insert
@@ -921,6 +931,10 @@ using (bucket_id = 'welcome-videos' and public.is_admin());
 create policy "Anyone can read welcome videos"
 on storage.objects for select
 using (bucket_id = 'welcome-videos');
+
+create policy "Anyone can read course thumbnails"
+on storage.objects for select
+using (bucket_id = 'course-thumbnails');
 
 create policy "Students upload own submissions"
 on storage.objects for insert
@@ -966,6 +980,22 @@ using (
       from public.lessons
       join public.enrollments on enrollments.course_id = lessons.course_id
       where lessons.assignment_path = storage.objects.name
+        and enrollments.user_id = auth.uid()
+    )
+  )
+);
+
+create policy "Enrolled students read course materials"
+on storage.objects for select
+using (
+  bucket_id = 'course-materials'
+  and (
+    public.is_admin()
+    or exists (
+      select 1
+      from public.lessons
+      join public.enrollments on enrollments.course_id = lessons.course_id
+      where lessons.resource_path = storage.objects.name
         and enrollments.user_id = auth.uid()
     )
   )

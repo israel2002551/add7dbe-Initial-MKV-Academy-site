@@ -5,6 +5,7 @@
    ========================================================================== */
 
 (function () {
+  let coursesCache = [];
   // Fallback mirrors data/courses.json; keep both in sync when editing content.
   const FALLBACK_COURSES = [
     { id: "solidworks-beginner-cswa", title: "SolidWorks: Beginner to CSWA", category: "SOLIDWORKS", level: "Beginner", duration: "6 Weeks", badge: "Popular", cardStyle: "brand", icon: "cube", paymentLink: "https://flutterwave.com/pay/hwtqgnslu4bd", description: "Learn fundamental 3D parametric modeling and master your first official certification.", highlights: ["Sketch Relations & Master Parametrics", "Bottom-up Assemblies & Drawings", "Live CSWA Prep & Practice Exam Mockups"] },
@@ -35,9 +36,9 @@
   };
 
   function cardTopClass(style) {
-    if (style === "dark") return "bg-slate-900";
-    if (style === "slate") return "bg-gradient-to-br from-slate-500 to-slate-300";
-    return "bg-brand-900";
+    if (style === "dark") return "from-slate-950 via-slate-800 to-slate-700";
+    if (style === "slate") return "from-slate-700 via-slate-500 to-cyan-500";
+    return "from-brand-900 via-brand-700 to-cyan-500";
   }
 
   function enrollCta(course) {
@@ -69,27 +70,48 @@
 
   function courseCardMarkup(course) {
     const highlights = course.highlights && course.highlights.length ? course.highlights : ["Private student dashboard", "Lesson videos and assignments", "Progress tracking after enrollment"];
+    const thumbnail = course.thumbnailUrl
+      ? `<img src="${course.thumbnailUrl}" alt="" class="absolute inset-0 h-full w-full object-cover" loading="lazy" /><div class="absolute inset-0 bg-slate-950/45"></div>`
+      : `<div class="absolute inset-0 opacity-20" style="background-image: linear-gradient(to right, rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.5) 1px, transparent 1px); background-size: 28px 28px;"></div>`;
     return `
-      <article class="mkv-card group flex flex-col" data-category="${course.category}" data-title="${course.title.toLowerCase()}">
-        <div class="${cardTopClass(course.cardStyle)} p-6 relative">
-          ${course.badge ? `<span class="absolute top-6 right-6 bg-emerald-500 text-white text-xs font-semibold px-3 py-1 rounded-full">${course.badge}</span>` : ""}
-          <div class="h-12 w-12 rounded-xl bg-white/10 text-cyan-300 flex items-center justify-center mb-5">
-            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">${ICONS[course.icon] || ICONS.cube}</svg>
+      <article class="mkv-card group grid md:grid-cols-[220px_1fr] min-h-[260px]" data-category="${course.category}" data-title="${course.title.toLowerCase()}">
+        <div class="relative overflow-hidden bg-gradient-to-br ${cardTopClass(course.cardStyle)} p-6 text-white">
+          ${thumbnail}
+          <div class="relative z-10 flex h-full min-h-[210px] flex-col justify-between">
+            <div>
+              ${course.badge ? `<span class="inline-flex rounded-full bg-emerald-400 px-3 py-1 text-xs font-semibold text-slate-950">${course.badge}</span>` : `<span class="inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white">${course.level}</span>`}
+            </div>
+            <div class="mx-auto flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 text-cyan-100 ring-1 ring-white/15">
+              <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.4">${ICONS[course.icon] || ICONS.cube}</svg>
+            </div>
+            <p class="font-technical text-xs uppercase tracking-widest text-cyan-100">${course.category}</p>
           </div>
-          <h3 class="text-xl font-extrabold text-white tracking-tight">${course.title}</h3>
-          <p class="mt-2 text-sm text-slate-200/80 leading-relaxed">${course.description}</p>
         </div>
-        <div class="bg-white p-6 flex-1 flex flex-col">
-          <ul class="space-y-3 flex-1">
+        <div class="bg-white p-6 flex min-w-0 flex-col">
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="font-technical text-xs uppercase tracking-wide text-brand-700">${course.duration} Program</p>
+              <h3 class="mt-2 text-2xl font-extrabold tracking-tight text-slate-900">${course.title}</h3>
+              <p class="mt-2 text-sm leading-relaxed text-slate-600">${course.description}</p>
+            </div>
+            <div class="shrink-0 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-right">
+              <p class="text-[11px] font-semibold uppercase text-slate-400">Level</p>
+              <p class="mt-1 text-sm font-bold text-slate-900">${course.level}</p>
+            </div>
+          </div>
+          <ul class="mt-5 grid gap-2 sm:grid-cols-2">
             ${highlights.map((h) => `
               <li class="flex items-start gap-2.5 text-sm text-slate-600">
-                <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+                <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
                 <span>${h}</span>
               </li>`).join("")}
           </ul>
-          <div class="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between">
-            <span class="font-technical text-xs uppercase tracking-wide text-slate-400">${course.duration} Program</span>
-            ${enrollCta(course)}
+          <div class="mt-auto flex items-center justify-between gap-4 border-t border-slate-100 pt-5">
+            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">${course.highlights.length || 3} outcomes</span>
+            <div class="flex items-center gap-3">
+              <button type="button" data-preview-course="${course.id}" class="text-sm font-semibold text-slate-600 hover:text-brand-700"><span data-i18n="Preview">Preview</span></button>
+              ${enrollCta(course)}
+            </div>
           </div>
         </div>
       </article>
@@ -99,9 +121,79 @@
   function renderCourses(courses) {
     const grid = document.getElementById("courses-grid");
     if (!grid) return;
+    coursesCache = courses;
     grid.innerHTML = courses.length
       ? courses.map(courseCardMarkup).join("")
       : `<p class="col-span-full text-center text-slate-500 py-12">No courses match your search yet - try a different keyword or category.</p>`;
+    bindPreviewButtons();
+  }
+
+  function syllabusMarkup(course) {
+    const lectures = course.lectures && course.lectures.length ? course.lectures : [];
+    if (!lectures.length) {
+      return `<p class="rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500">Detailed syllabus will be added soon.</p>`;
+    }
+    return `<div class="divide-y divide-slate-100 rounded-xl border border-slate-100">${lectures.map((lecture, index) => `
+      <details class="group p-4" ${index === 0 ? "open" : ""}>
+        <summary class="cursor-pointer list-none font-semibold text-slate-900">${index + 1}. ${escapeText(lecture.title)}</summary>
+        <p class="mt-2 text-sm text-slate-600">${escapeText(lecture.description || "Lecture details coming soon.")}</p>
+      </details>
+    `).join("")}</div>`;
+  }
+
+  function escapeText(value) {
+    return String(value || "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
+    })[char]);
+  }
+
+  function openCoursePreview(courseId) {
+    const course = coursesCache.find((item) => item.id === courseId);
+    const modal = document.getElementById("course-preview-modal");
+    const content = document.getElementById("course-preview-content");
+    if (!course || !modal || !content) return;
+    content.innerHTML = `
+      <div class="relative min-h-60 bg-gradient-to-br ${cardTopClass(course.cardStyle)} p-6 text-white">
+        ${course.thumbnailUrl ? `<img src="${course.thumbnailUrl}" alt="" class="absolute inset-0 h-full w-full object-cover" /><div class="absolute inset-0 bg-slate-950/50"></div>` : ""}
+        <button type="button" data-close-course-preview class="absolute right-4 top-4 z-10 rounded-lg bg-white/15 px-3 py-2 text-sm font-semibold text-white hover:bg-white/25">Close</button>
+        <div class="relative z-10 max-w-2xl pt-16">
+          <p class="font-technical text-xs uppercase tracking-widest text-cyan-100">${escapeText(course.category)}</p>
+          <h2 class="mt-3 text-3xl font-extrabold tracking-tight">${escapeText(course.title)}</h2>
+          <p class="mt-3 text-sm leading-relaxed text-slate-100">${escapeText(course.description)}</p>
+        </div>
+      </div>
+      <div class="grid gap-6 p-6 lg:grid-cols-[1fr_260px]">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Course Syllabus</h3>
+          <div class="mt-4">${syllabusMarkup(course)}</div>
+        </div>
+        <aside class="rounded-xl border border-slate-100 bg-slate-50 p-5">
+          <p class="text-xs font-semibold uppercase text-slate-400">Level</p>
+          <p class="mt-1 font-bold text-slate-900">${escapeText(course.level)}</p>
+          <p class="mt-4 text-xs font-semibold uppercase text-slate-400">Duration</p>
+          <p class="mt-1 font-bold text-slate-900">${escapeText(course.duration)}</p>
+          <p class="mt-4 text-xs font-semibold uppercase text-slate-400">Instructor</p>
+          <p class="mt-1 text-sm text-slate-600">MKV Academy instructor team</p>
+          <div class="mt-5">${enrollCta(course)}</div>
+        </aside>
+      </div>
+    `;
+    modal.classList.remove("hidden");
+    content.querySelector("[data-close-course-preview]")?.addEventListener("click", closeCoursePreview);
+  }
+
+  function closeCoursePreview() {
+    document.getElementById("course-preview-modal")?.classList.add("hidden");
+  }
+
+  function bindPreviewButtons() {
+    document.querySelectorAll("[data-preview-course]").forEach((btn) => {
+      btn.addEventListener("click", () => openCoursePreview(btn.getAttribute("data-preview-course")));
+    });
   }
 
   document.addEventListener("click", async (event) => {
@@ -165,6 +257,13 @@
     initCourseControls(normalized);
   }
 
+  function getCourseThumbnailUrl(course) {
+    if (course.thumbnailUrl || course.thumbnail_url) return course.thumbnailUrl || course.thumbnail_url;
+    if (!course.thumbnail_path || !window.MKV_SUPABASE?.client) return "";
+    const { data } = window.MKV_SUPABASE.client.storage.from("course-thumbnails").getPublicUrl(course.thumbnail_path);
+    return data?.publicUrl || "";
+  }
+
   function normalizeCourse(course) {
     return {
       id: course.id,
@@ -176,10 +275,12 @@
       cardStyle: course.cardStyle || course.card_style || "brand",
       icon: course.icon || "cube",
       paymentLink: course.paymentLink || course.payment_link || "",
+      thumbnailUrl: getCourseThumbnailUrl(course),
       description: course.description || "A practical MKV Academy course with private lessons and assignments.",
       highlights: course.highlights || [],
       price: course.price || 0,
       currency: course.currency || "NGN",
+      lectures: course.lectures || [],
     };
   }
 
@@ -202,6 +303,11 @@
     }
 
     loadFallbackCourses();
+  });
+
+  document.addEventListener("click", (event) => {
+    const modal = document.getElementById("course-preview-modal");
+    if (modal && event.target === modal) closeCoursePreview();
   });
 
   function loadFallbackCourses() {

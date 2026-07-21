@@ -85,7 +85,7 @@ function mkvRenderNavbar() {
       <a href="${link.href}"
          class="relative text-sm font-medium transition-colors hover:text-brand-700 ${isActive ? "text-brand-700" : "text-slate-700"}"
          ${isActive ? 'aria-current="page"' : ""}>
-        ${link.label}
+        <span data-i18n="${link.label}">${link.label}</span>
         <span class="absolute -bottom-1.5 left-0 h-0.5 rounded-full bg-brand-600 transition-all ${isActive ? "w-full" : "w-0 group-hover:w-full"}"></span>
       </a>
     `;
@@ -96,7 +96,7 @@ function mkvRenderNavbar() {
     return `
       <a href="${link.href}"
          class="block rounded-lg px-4 py-3 text-base font-medium ${isActive ? "bg-brand-50 text-brand-700" : "text-slate-700 hover:bg-slate-50"}">
-        ${link.label}
+        <span data-i18n="${link.label}">${link.label}</span>
       </a>
     `;
   }).join("");
@@ -116,30 +116,35 @@ function mkvRenderNavbar() {
             <svg data-theme-icon-light class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
             <svg data-theme-icon-dark class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
           </button>
+          <label class="sr-only" for="language-toggle">Language</label>
+          <select id="language-toggle" data-language-toggle class="h-10 rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-600/20">
+            <option value="en">EN</option>
+            <option value="fr">FR</option>
+          </select>
 
           <button data-login-trigger data-auth-logged-out type="button"
                   class="text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors">
-            Student Login
+            <span data-i18n="Student Login">Student Login</span>
           </button>
 
           <div class="flex items-center gap-3">
             <a href="students.html" data-auth-logged-in class="hidden text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors">
-              My Portal
+              <span data-i18n="My Portal">My Portal</span>
             </a>
             <a href="admin.html" data-auth-admin class="hidden text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors">
-              Admin
+              <span data-i18n="Admin">Admin</span>
             </a>
             <a href="instructor.html" data-auth-instructor class="hidden text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors">
-              Instructor
+              <span data-i18n="Instructor">Instructor</span>
             </a>
             <button data-logout-trigger data-auth-logged-in type="button" class="hidden text-sm text-slate-400 hover:text-slate-600 transition-colors" aria-label="Log out">
-              Log Out
+              <span data-i18n="Log Out">Log Out</span>
             </button>
           </div>
 
           <a href="contact.html"
              class="group inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-2.5 shadow-lg shadow-brand-600/25 hover:shadow-xl transition-all">
-            Talk to Someone
+            <span data-i18n="Talk to Someone">Talk to Someone</span>
             <svg class="w-4 h-4 icon-nudge" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
@@ -162,27 +167,33 @@ function mkvRenderNavbar() {
         <nav class="container-mkv py-3 space-y-1" aria-label="Mobile">
           ${mobileLinks}
 
+          <label class="block rounded-lg px-4 pt-3 text-xs font-semibold uppercase text-slate-400">Language</label>
+          <select data-language-toggle class="mx-4 mb-2 h-10 rounded-lg border border-slate-200 bg-white px-2 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-600/20">
+            <option value="en">EN</option>
+            <option value="fr">FR</option>
+          </select>
+
           <button data-login-trigger data-auth-logged-out type="button"
                   class="block w-full text-left rounded-lg px-4 py-3 text-base font-medium text-slate-700 hover:bg-slate-50">
-            Student Login
+            <span data-i18n="Student Login">Student Login</span>
           </button>
           <div data-auth-logged-in class="hidden">
             <a href="students.html" class="block rounded-lg px-4 py-3 text-base font-medium text-slate-700 hover:bg-slate-50">
-              My Portal
+              <span data-i18n="My Portal">My Portal</span>
             </a>
             <a href="admin.html" data-auth-admin class="hidden block rounded-lg px-4 py-3 text-base font-medium text-slate-700 hover:bg-slate-50">
-              Admin Studio
+              <span data-i18n="Admin">Admin</span>
             </a>
             <a href="instructor.html" data-auth-instructor class="hidden block rounded-lg px-4 py-3 text-base font-medium text-slate-700 hover:bg-slate-50">
-              Instructor
+              <span data-i18n="Instructor">Instructor</span>
             </a>
             <button data-logout-trigger type="button" class="block w-full text-left rounded-lg px-4 py-3 text-base font-medium text-slate-400 hover:bg-slate-50">
-              Log Out
+              <span data-i18n="Log Out">Log Out</span>
             </button>
           </div>
 
           <a href="contact.html" class="block mt-2 text-center bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-5 py-3 shadow-lg shadow-brand-600/25 transition-all">
-            Talk to Someone
+            <span data-i18n="Talk to Someone">Talk to Someone</span>
           </a>
         </nav>
       </div>

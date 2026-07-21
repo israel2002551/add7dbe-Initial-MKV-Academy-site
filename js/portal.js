@@ -98,6 +98,7 @@
       .from("lessons")
       .select("*")
       .in("course_id", courseIds)
+      .order("chapter_order", { ascending: true })
       .order("sort_order", { ascending: true });
 
     if (lessonsError) throw lessonsError;
@@ -191,6 +192,11 @@
                 ? `<button data-download-file data-bucket="${lesson.assignment_bucket || "course-assignments"}" data-path="${lesson.assignment_path}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Assignment</button>`
                 : ""
             }
+            ${
+              unlocked && lesson.resource_path
+                ? `<button data-download-file data-bucket="${lesson.resource_bucket || "course-materials"}" data-path="${lesson.resource_path}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Resource</button>`
+                : ""
+            }
           </div>
         </div>
         ${
@@ -219,6 +225,39 @@
     `;
   }
 
+  function groupLessonsByChapter(lessons) {
+    const chapters = new Map();
+    (lessons || []).forEach((lesson) => {
+      const title = lesson.chapter_title || "General";
+      const order = Number(lesson.chapter_order || 1);
+      if (!chapters.has(title)) chapters.set(title, { title, order, lessons: [] });
+      chapters.get(title).lessons.push(lesson);
+    });
+    return [...chapters.values()]
+      .sort((a, b) => a.order - b.order)
+      .map((chapter) => ({
+        ...chapter,
+        lessons: chapter.lessons.sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)),
+      }));
+  }
+
+  function chapterMarkup(chapter, course, index) {
+    return `
+      <details class="border-t border-slate-100" ${index === 0 ? "open" : ""}>
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-4">
+          <div>
+            <p class="font-semibold text-slate-900">Chapter ${chapter.order}: ${chapter.title}</p>
+            <p class="mt-1 text-xs text-slate-400">${chapter.lessons.length} video lesson${chapter.lessons.length === 1 ? "" : "s"}</p>
+          </div>
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Open</span>
+        </summary>
+        <div class="pb-2">
+          ${chapter.lessons.map((lesson) => lessonRow(lesson, course)).join("")}
+        </div>
+      </details>
+    `;
+  }
+
   function courseCard(course) {
     const pct = courseProgress(course);
     return `
@@ -237,9 +276,18 @@
         <div class="mt-5">
           ${
             course.lessons.length
-              ? course.lessons.map((lesson) => lessonRow(lesson, course)).join("")
+              ? groupLessonsByChapter(course.lessons).map((chapter, index) => chapterMarkup(chapter, course, index)).join("")
               : `<p class="py-4 text-sm text-slate-400 border-t border-slate-100">Lessons have not been uploaded for this course yet.</p>`
           }
+        </div>
+        <div class="mt-6 rounded-xl border border-slate-100 bg-slate-50 p-5">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <p class="font-semibold text-slate-900">Overall Course Assessment</p>
+              <p class="mt-1 text-sm text-slate-600">Submit your final CAD files, reports, or ZIP package for instructor grading when you complete the course.</p>
+            </div>
+            <a href="#project-review" class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">Submit Final Project</a>
+          </div>
         </div>
       </article>
     `;
@@ -583,6 +631,10 @@
     const { data, error } = await window.MKV_SUPABASE.client.rpc("get_quiz_payload", { p_quiz_id: quizId });
     if (error || !data) {
       wrap.innerHTML = `<p class="text-red-600">${error ? error.message : "Quiz unavailable"}</p>`;
+      return;
+    }
+    if (!data.questions || !data.questions.length) {
+      wrap.innerHTML = `<p class="text-sm text-slate-500">No quiz questions have been added for this course yet.</p>`;
       return;
     }
     wrap.innerHTML = `

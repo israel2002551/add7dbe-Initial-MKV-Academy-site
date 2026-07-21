@@ -74,13 +74,19 @@
       </div>
     </section>
 
-    <section class="py-20 lg:py-28 bg-white">
+    <section class="py-16 lg:py-20 bg-white">
       <div class="container-mkv">
-        <div id="courses-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div id="courses-grid" class="grid lg:grid-cols-2 gap-6">
           <p class="col-span-full text-center text-slate-400 py-12">Loading courses...</p>
         </div>
       </div>
     </section>
+
+    <div id="course-preview-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 px-4 py-8 overflow-y-auto">
+      <div class="mx-auto max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div id="course-preview-content"></div>
+      </div>
+    </div>
 
     <section class="py-20 bg-slate-100">
       <div class="container-mkv grid lg:grid-cols-3 gap-8">

@@ -126,6 +126,10 @@
     signupForm && signupForm.classList.toggle("hidden", !isSignup);
   }
 
+  function resetRedirectUrl() {
+    return window.location.href.split("#")[0];
+  }
+
   async function refreshUser() {
     const supa = window.MKV_SUPABASE;
     if (!supa || !supa.isConfigured) {
@@ -236,14 +240,69 @@
     });
   }
 
+  function bindPasswordReset() {
+    document.querySelectorAll('[data-auth-form="login"]').forEach((form) => {
+      if (form.querySelector("[data-password-reset-trigger]")) return;
+
+      const row = document.createElement("div");
+      row.className = "text-right";
+      row.innerHTML = '<button type="button" data-password-reset-trigger class="text-sm font-semibold text-brand-700 hover:text-brand-900">Forgot password?</button>';
+      const submit = form.querySelector('button[type="submit"]');
+      if (submit) form.insertBefore(row, submit);
+      else form.appendChild(row);
+
+      row.querySelector("[data-password-reset-trigger]").addEventListener("click", async () => {
+        if (!window.MKV_SUPABASE || !window.MKV_SUPABASE.client) {
+          showAuthMessage(window.MKV_SUPABASE ? window.MKV_SUPABASE.missingConfigMessage : "Supabase is not loaded.", "error");
+          return;
+        }
+
+        const emailInput = form.querySelector('input[name="email"]');
+        const email = emailInput && emailInput.value.trim()
+          ? emailInput.value.trim()
+          : window.prompt("Enter the email address on your MKV Academy account.");
+        if (!email) return;
+
+        const { error } = await window.MKV_SUPABASE.client.auth.resetPasswordForEmail(email, {
+          redirectTo: resetRedirectUrl(),
+        });
+        if (error) {
+          showAuthMessage(friendlyAuthError(error), "error");
+          return;
+        }
+        showAuthMessage("Password reset link sent. Check your email and follow the link to create a new password.", "success");
+      });
+    });
+  }
+
+  async function handlePasswordRecovery() {
+    if (!window.MKV_SUPABASE || !window.MKV_SUPABASE.client) return;
+    const newPassword = window.prompt("Enter your new password for MKV Academy.");
+    if (!newPassword) return;
+    if (newPassword.length < 6) {
+      showAuthMessage("Password must be at least 6 characters.", "error");
+      return;
+    }
+    const { error } = await window.MKV_SUPABASE.client.auth.updateUser({ password: newPassword });
+    if (error) {
+      showAuthMessage(friendlyAuthError(error), "error");
+      return;
+    }
+    showAuthMessage("Password updated. You can continue with your account.", "success");
+  }
+
   function initAuth() {
     bindTriggers();
     bindForms();
+    bindPasswordReset();
     initPasswordToggles();
     refreshUser();
 
     if (window.MKV_SUPABASE && window.MKV_SUPABASE.client) {
-      window.MKV_SUPABASE.client.auth.onAuthStateChange(() => refreshUser());
+      window.MKV_SUPABASE.client.auth.onAuthStateChange((event) => {
+        if (event === "PASSWORD_RECOVERY") handlePasswordRecovery();
+        refreshUser();
+      });
     }
 
     const banner = document.getElementById("preview-mode-banner");

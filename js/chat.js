@@ -8,6 +8,8 @@
   let threadsCache = [];
   let refreshTimer = null;
   let realtimeChannel = null;
+  let studentPickerResolve = null;
+  let studentPickerStudents = [];
 
   function isAdmin(user) {
     const role = user && user.profile && user.profile.role;
@@ -55,9 +57,16 @@
 
   function threadTitle(thread) {
     if (isStaff(window.MKV_CURRENT_USER)) {
-      return `${thread.subject} - ${thread.student_username || thread.student_id.slice(0, 8)}`;
+      const name = thread.student_name || thread.student_username || "Unknown student";
+      const shortId = thread.student_id ? thread.student_id.slice(0, 8) : "";
+      return `${thread.subject} - ${name}${shortId ? ` (${shortId})` : ""}`;
     }
     return thread.subject;
+  }
+
+  function studentMeta(thread) {
+    const parts = [thread.student_name, thread.student_email, thread.student_username, thread.student_id].filter(Boolean);
+    return parts.join(" - ");
   }
 
   function renderThreads() {
@@ -78,6 +87,7 @@
                     active ? "bg-brand-50 text-brand-700" : "hover:bg-slate-50 text-slate-700"
                   }">
             <span class="block text-sm font-semibold">${escapeHtml(threadTitle(thread))}</span>
+            ${isStaff(window.MKV_CURRENT_USER) ? `<span class="mt-1 block text-[11px] text-slate-400">${escapeHtml(studentMeta(thread))}</span>` : ""}
             <span class="mt-1 block text-xs text-slate-400">${formatDate(thread.updated_at || thread.created_at)}</span>
           </button>
         `;
@@ -120,11 +130,16 @@
   async function hydrateThreadStudents(threads) {
     const ids = [...new Set(threads.map((thread) => thread.student_id).filter(Boolean))];
     if (!ids.length) return threads;
-    const { data } = await window.MKV_SUPABASE.client.from("profiles").select("id, username, full_name").in("id", ids);
+    const { data } = await window.MKV_SUPABASE.client.from("profiles").select("id, username, full_name, email").in("id", ids);
     const profileMap = new Map((data || []).map((profile) => [profile.id, profile]));
     return threads.map((thread) => {
       const profile = profileMap.get(thread.student_id);
-      return { ...thread, student_username: profile?.username || profile?.full_name || "" };
+      return {
+        ...thread,
+        student_username: profile?.username || "",
+        student_name: profile?.full_name || "",
+        student_email: profile?.email || "",
+      };
     });
   }
 
@@ -175,7 +190,10 @@
 
     if (thread) {
       if (subject) subject.textContent = threadTitle(thread);
-      if (meta) meta.textContent = `${thread.status} - ${formatDate(thread.updated_at || thread.created_at)}`;
+      if (meta) {
+        const student = isStaff(window.MKV_CURRENT_USER) ? `${studentMeta(thread)} - ` : "";
+        meta.textContent = `${student}${thread.status} - ${formatDate(thread.updated_at || thread.created_at)}`;
+      }
     }
     if (form) form.classList.remove("hidden");
 
@@ -227,9 +245,7 @@
     const subject = window.prompt("Subject (required)", "Course question");
     if (!subject) return;
 
-    const studentId = isStaff(user)
-      ? window.prompt("Student user ID for this conversation")
-      : user.id;
+    const studentId = isStaff(user) ? await pickStudent() : user.id;
     if (!studentId) return;
 
     const { data, error } = await window.MKV_SUPABASE.client
@@ -245,6 +261,86 @@
 
     activeThreadId = data.id;
     await loadThreads();
+  }
+
+  function studentLabel(student) {
+    const name = student.full_name || student.username || student.email || "Unnamed student";
+    const secondary = [student.email, student.username, student.id].filter(Boolean).join(" - ");
+    return { name, secondary };
+  }
+
+  function renderStudentPicker(students) {
+    const list = document.getElementById("student-picker-list");
+    if (!list) return;
+    if (!students.length) {
+      list.innerHTML = `<p class="p-4 text-sm text-slate-400">No students found.</p>`;
+      return;
+    }
+    list.innerHTML = students.map((student) => {
+      const label = studentLabel(student);
+      return `
+        <button type="button" data-student-id="${student.id}" class="block w-full rounded-xl px-4 py-3 text-left hover:bg-slate-50">
+          <span class="block text-sm font-semibold text-slate-900">${escapeHtml(label.name)}</span>
+          <span class="mt-1 block text-xs text-slate-400">${escapeHtml(label.secondary)}</span>
+        </button>
+      `;
+    }).join("");
+    list.querySelectorAll("[data-student-id]").forEach((btn) => {
+      btn.addEventListener("click", () => closeStudentPicker(btn.getAttribute("data-student-id")));
+    });
+  }
+
+  function filterStudentPicker() {
+    const input = document.getElementById("student-picker-search");
+    const term = input ? input.value.trim().toLowerCase() : "";
+    const filtered = !term
+      ? studentPickerStudents
+      : studentPickerStudents.filter((student) => {
+        return [student.full_name, student.username, student.email, student.id]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(term));
+      });
+    renderStudentPicker(filtered);
+  }
+
+  function closeStudentPicker(value) {
+    const modal = document.getElementById("student-picker-modal");
+    if (modal) modal.classList.add("hidden");
+    if (studentPickerResolve) {
+      studentPickerResolve(value || "");
+      studentPickerResolve = null;
+    }
+  }
+
+  async function loadStudentPickerStudents() {
+    const list = document.getElementById("student-picker-list");
+    if (list) list.innerHTML = `<p class="p-4 text-sm text-slate-400">Loading students...</p>`;
+    const { data, error } = await window.MKV_SUPABASE.client
+      .from("profiles")
+      .select("id, username, full_name, email, role")
+      .eq("role", "student")
+      .order("full_name", { ascending: true });
+    if (error) {
+      if (list) list.innerHTML = `<p class="p-4 text-sm text-red-600">${escapeHtml(error.message)}</p>`;
+      return;
+    }
+    studentPickerStudents = data || [];
+    filterStudentPicker();
+  }
+
+  function pickStudent() {
+    const modal = document.getElementById("student-picker-modal");
+    if (!modal) return Promise.resolve(window.prompt("Student user ID for this conversation"));
+    modal.classList.remove("hidden");
+    const input = document.getElementById("student-picker-search");
+    if (input) {
+      input.value = "";
+      setTimeout(() => input.focus(), 0);
+    }
+    loadStudentPickerStudents();
+    return new Promise((resolve) => {
+      studentPickerResolve = resolve;
+    });
   }
 
   function bindChatForm() {
@@ -300,8 +396,21 @@
       activeThreadId = null;
       await loadThreads();
       const wrap = document.getElementById("chat-messages");
-      if (wrap) wrap.innerHTML = `<div class="text-center text-sm text-slate-400 py-20">Conversation archived.</div>`;
+      if (wrap) wrap.innerHTML = `<div class="text-center text-sm text-slate-400 py-20">Conversation deleted.</div>`;
     });
+  }
+
+  function bindStudentPicker() {
+    const modal = document.getElementById("student-picker-modal");
+    if (!modal) return;
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) closeStudentPicker("");
+    });
+    document.querySelectorAll("[data-student-picker-cancel]").forEach((btn) => {
+      btn.addEventListener("click", () => closeStudentPicker(""));
+    });
+    const input = document.getElementById("student-picker-search");
+    input && input.addEventListener("input", filterStudentPicker);
   }
 
   function initChat() {
@@ -326,6 +435,7 @@
   document.addEventListener("DOMContentLoaded", () => {
     bindChatForm();
     bindArchiveButton();
+    bindStudentPicker();
     const newBtn = document.getElementById("new-chat-thread");
     newBtn && newBtn.addEventListener("click", createThread);
     setTimeout(initChat, 0);
