@@ -160,6 +160,11 @@
     });
   }
 
+  async function refreshLessonUpload() {
+    await loadCourses();
+    await loadLessons();
+  }
+
   function groupedLessonMarkup(lessons) {
     const courses = new Map();
     lessons.forEach((lesson) => {
@@ -824,6 +829,11 @@
     });
   }
 
+  async function refreshStudentManager() {
+    await loadStudents();
+    if (selectedStudent) await renderStudentDetail();
+  }
+
   function accessExpiryFor(courseId, root) {
     const select = root.querySelector(`[data-access-duration="${courseId}"]`);
     const value = select ? select.value : "2m";
@@ -923,6 +933,18 @@
     });
   }
 
+  async function refreshInstructorManager() {
+    await loadInstructorUsers();
+    if (!selectedInstructor) return;
+    const { data } = await window.MKV_SUPABASE.client
+      .from("profiles")
+      .select("id, full_name, email, role, created_at")
+      .eq("id", selectedInstructor.id)
+      .maybeSingle();
+    if (data) selectedInstructor = data;
+    await renderInstructorDetail();
+  }
+
   async function getInstructorAssignments(userId) {
     const { data, error } = await window.MKV_SUPABASE.client
       .from("course_instructors")
@@ -957,12 +979,25 @@
         <span class="self-start rounded-full px-2.5 py-1 text-xs font-technical ${canTeach ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}">${escapeHtml(role)}</span>
       </div>
 
+      <div class="mt-5 grid sm:grid-cols-3 gap-3">
+        <div class="rounded-lg bg-slate-50 border border-slate-100 px-4 py-3">
+          <p class="text-[11px] uppercase font-technical text-slate-400">Assigned Courses</p>
+          <p class="mt-1 text-xl font-extrabold text-slate-900">${assignedIds.size}</p>
+        </div>
+        <div class="rounded-lg bg-slate-50 border border-slate-100 px-4 py-3">
+          <p class="text-[11px] uppercase font-technical text-slate-400">Instructor Status</p>
+          <p class="mt-1 text-sm font-bold ${canTeach ? "text-emerald-700" : "text-slate-500"}">${canTeach ? "Enabled" : "Not enabled"}</p>
+        </div>
+        <button type="button" data-copy-instructor-email class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 text-sm font-semibold">Copy Email</button>
+      </div>
+
       <div class="mt-5 flex flex-col sm:flex-row gap-3">
         ${
           canTeach
             ? `<button type="button" data-instructor-role-action="remove" ${protectedRole ? "disabled" : ""} class="${protectedRole ? "cursor-not-allowed bg-slate-100 text-slate-400" : "bg-red-50 text-red-700 hover:bg-red-100"} rounded-lg px-4 py-2 text-sm font-semibold">Remove Instructor Access</button>`
             : `<button type="button" data-instructor-role-action="promote" class="bg-brand-600 hover:bg-brand-700 text-white rounded-lg px-4 py-2 text-sm font-semibold">Make Instructor</button>`
         }
+        <button type="button" data-refresh-instructor-detail class="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg px-4 py-2 text-sm font-semibold">Refresh Detail</button>
         ${protectedRole ? `<p class="text-xs text-slate-400 sm:self-center">Admin and owner accounts already have instructor access.</p>` : ""}
       </div>
 
@@ -994,6 +1029,18 @@
       if (action === "promote") await updateInstructorRole(selectedInstructor.id, "instructor");
       if (action === "remove" && !protectedRole) await updateInstructorRole(selectedInstructor.id, "student");
     });
+
+    detail.querySelector("[data-copy-instructor-email]")?.addEventListener("click", async () => {
+      const email = selectedInstructor.email || selectedInstructor.id;
+      try {
+        await navigator.clipboard.writeText(email);
+        setMessage("Instructor email copied.", "success");
+      } catch (error) {
+        window.prompt("Copy instructor email", email);
+      }
+    });
+
+    detail.querySelector("[data-refresh-instructor-detail]")?.addEventListener("click", refreshInstructorManager);
 
     detail.querySelectorAll("[data-instructor-course-action]").forEach((btn) => {
       btn.addEventListener("click", async () => {
@@ -1038,6 +1085,7 @@
       return;
     }
     await createNotification(userId, "Course assigned", "A course has been added to your instructor dashboard.", "instructor.html");
+    await loadInstructorUsers();
   }
 
   async function unassignInstructorCourse(userId, courseId) {
@@ -1047,6 +1095,7 @@
       .eq("course_id", courseId)
       .eq("instructor_id", userId);
     if (error) window.alert(error.message);
+    await loadInstructorUsers();
   }
 
   async function loadSubmissions() {
@@ -1241,6 +1290,8 @@
     bindLessonForm();
     bindLandingVideoForm();
     bindCouponForm();
+    const refreshLessonUploadBtn = document.getElementById("admin-refresh-lesson-upload");
+    refreshLessonUploadBtn && refreshLessonUploadBtn.addEventListener("click", refreshLessonUpload);
     const refresh = document.getElementById("admin-refresh");
     refresh && refresh.addEventListener("click", loadLessons);
     const refreshCourses = document.getElementById("admin-refresh-courses");
@@ -1251,10 +1302,16 @@
     refreshAnalytics && refreshAnalytics.addEventListener("click", loadAnalytics);
     const refreshReferrals = document.getElementById("admin-refresh-referrals");
     refreshReferrals && refreshReferrals.addEventListener("click", loadReferralAnalytics);
+    const refreshCoupons = document.getElementById("admin-refresh-coupons");
+    refreshCoupons && refreshCoupons.addEventListener("click", loadCoupons);
     const copyReferralEmailsBtn = document.getElementById("admin-copy-referral-emails");
     copyReferralEmailsBtn && copyReferralEmailsBtn.addEventListener("click", copyReferralEmails);
     const refreshSubmissions = document.getElementById("admin-refresh-submissions");
     refreshSubmissions && refreshSubmissions.addEventListener("click", loadSubmissions);
+    const refreshStudents = document.getElementById("admin-refresh-students");
+    refreshStudents && refreshStudents.addEventListener("click", refreshStudentManager);
+    const refreshInstructors = document.getElementById("admin-refresh-instructors");
+    refreshInstructors && refreshInstructors.addEventListener("click", refreshInstructorManager);
     const studentSearch = document.getElementById("admin-student-search");
     studentSearch && studentSearch.addEventListener("input", () => loadStudents());
     const instructorSearch = document.getElementById("admin-instructor-search");

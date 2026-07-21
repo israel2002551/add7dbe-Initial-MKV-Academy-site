@@ -1,6 +1,7 @@
 /* MKV Academy - Instructor Dashboard */
 (function () {
   let instructorCourses = [];
+  let lastSubmissions = [];
 
   function isInstructor(user) {
     const role = user && user.profile && user.profile.role;
@@ -41,6 +42,7 @@
       ? window.MKV_SUPABASE.client.from("courses").select("id, title, description").order("title")
       : window.MKV_SUPABASE.client.from("course_instructors").select("courses(id, title, description)").eq("instructor_id", user.id);
 
+    list.innerHTML = `<p class="py-4 text-sm text-slate-400">Loading assigned courses...</p>`;
     const { data, error } = await query;
     if (error) {
       list.innerHTML = `<p class="py-4 text-sm text-red-600">${error.message}</p>`;
@@ -51,31 +53,79 @@
       ? data || []
       : (data || []).map((row) => row.courses).filter(Boolean);
 
-    select.innerHTML = instructorCourses.map((course) => `<option value="${course.id}">${course.title}</option>`).join("");
+    select.innerHTML = instructorCourses.map((course) => `<option value="${course.id}">${escapeHtml(course.title)}</option>`).join("");
     list.innerHTML = instructorCourses.length
-      ? instructorCourses.map((course) => `<div class="py-4"><p class="font-semibold text-slate-900">${course.title}</p><p class="mt-1 text-sm text-slate-500">${course.description || ""}</p></div>`).join("")
+      ? instructorCourses.map((course) => `
+          <div class="py-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="font-semibold text-slate-900">${escapeHtml(course.title)}</p>
+                <p class="mt-1 text-sm text-slate-500">${escapeHtml(course.description || "")}</p>
+              </div>
+              <span class="rounded-full bg-brand-50 text-brand-700 px-2.5 py-1 text-[11px] font-technical">Assigned</span>
+            </div>
+          </div>
+        `).join("")
       : `<p class="py-4 text-sm text-slate-400">No assigned courses yet.</p>`;
   }
 
   async function loadSubmissions() {
     const list = document.getElementById("instructor-submissions-list");
-    if (!list || !window.MKV_SUPABASE?.client || !instructorCourses.length) return;
+    if (!list || !window.MKV_SUPABASE?.client) return;
+    if (!instructorCourses.length) {
+      lastSubmissions = [];
+      renderSubmissionStats();
+      list.innerHTML = `<p class="py-4 text-sm text-slate-400">No assigned courses yet.</p>`;
+      return;
+    }
     const courseIds = instructorCourses.map((course) => course.id);
-    const { data, error } = await window.MKV_SUPABASE.client
+    const statusFilter = document.getElementById("instructor-submission-status")?.value || "";
+    let query = window.MKV_SUPABASE.client
       .from("assignment_submissions")
       .select("id, user_id, course_id, file_bucket, file_path, note, status, grade, feedback, created_at, lessons(title)")
       .in("course_id", courseIds)
       .order("created_at", { ascending: false })
       .limit(12);
 
+    if (statusFilter) query = query.eq("status", statusFilter);
+
+    list.innerHTML = `<p class="py-4 text-sm text-slate-400">Loading submissions...</p>`;
+    const { data, error } = await query;
+
     if (error) {
       list.innerHTML = `<p class="py-4 text-sm text-red-600">${error.message}</p>`;
       return;
     }
+    lastSubmissions = data || [];
+    renderSubmissionStats();
     list.innerHTML = (data || []).length
       ? data.map(submissionMarkup).join("")
       : `<p class="py-4 text-sm text-slate-400">No submissions yet.</p>`;
     bindSubmissionActions();
+  }
+
+  function renderSubmissionStats() {
+    const stats = document.getElementById("instructor-submission-stats");
+    if (!stats) return;
+    const counts = lastSubmissions.reduce((items, item) => {
+      const key = item.status || "submitted";
+      items[key] = (items[key] || 0) + 1;
+      return items;
+    }, {});
+    const chips = [
+      ["Visible", lastSubmissions.length],
+      ["Submitted", counts.submitted || 0],
+      ["Needs revision", counts.needs_revision || 0],
+      ["Approved", counts.approved || 0],
+    ];
+    stats.innerHTML = chips
+      .map(([label, value]) => `<span class="rounded-full bg-slate-100 px-2.5 py-1">${label}: ${value}</span>`)
+      .join("");
+  }
+
+  async function refreshInstructorWorkspace() {
+    await loadCourses();
+    await loadSubmissions();
   }
 
   function submissionMarkup(submission) {
@@ -191,13 +241,15 @@
     }
     document.getElementById("instructor-status").textContent = `Signed in as ${user.email}`;
     show(true);
-    await loadCourses();
-    await loadSubmissions();
+    await refreshInstructorWorkspace();
   }
 
   document.addEventListener("mkv:auth-updated", init);
   document.addEventListener("DOMContentLoaded", () => {
     bindQuizForm();
+    document.getElementById("instructor-refresh-courses")?.addEventListener("click", refreshInstructorWorkspace);
+    document.getElementById("instructor-refresh-submissions")?.addEventListener("click", loadSubmissions);
+    document.getElementById("instructor-submission-status")?.addEventListener("change", loadSubmissions);
     setTimeout(init, 0);
   });
 })();

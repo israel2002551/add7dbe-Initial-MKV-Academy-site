@@ -63,7 +63,10 @@
 
         <div id="instructor-workspace" class="hidden mt-10 grid lg:grid-cols-5 gap-8">
           <section class="lg:col-span-2 mkv-card p-6">
-            <h2 class="text-xl font-bold text-slate-900">Assigned Courses</h2>
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="text-xl font-bold text-slate-900">Assigned Courses</h2>
+              <button id="instructor-refresh-courses" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Refresh</button>
+            </div>
             <div id="instructor-course-list" class="mt-5 divide-y divide-slate-100"></div>
           </section>
 
@@ -85,7 +88,22 @@
         </div>
 
         <section id="instructor-submissions-panel" class="hidden mt-8 mkv-card p-6">
-          <h2 class="text-xl font-bold text-slate-900">Recent Student Submissions</h2>
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Recent Student Submissions</h2>
+              <div id="instructor-submission-stats" class="mt-2 flex flex-wrap gap-2 text-xs text-slate-500"></div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <select id="instructor-submission-status" class="rounded-lg border border-slate-200 px-4 py-2 text-sm">
+                <option value="">All statuses</option>
+                <option value="submitted">Submitted</option>
+                <option value="reviewed">Reviewed</option>
+                <option value="needs_revision">Needs revision</option>
+                <option value="approved">Approved</option>
+              </select>
+              <button id="instructor-refresh-submissions" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Refresh</button>
+            </div>
+          </div>
           <div id="instructor-submissions-list" class="mt-5 divide-y divide-slate-100"></div>
         </section>
       </div>
