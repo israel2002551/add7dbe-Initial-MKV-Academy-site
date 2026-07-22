@@ -10,6 +10,7 @@
   let referralEmailsCache = [];
   let editingCourseId = "";
   let courseInstructorOptions = [];
+  const expandedLessonCourses = new Set();
 
   function isAdmin(user) {
     const role = user && user.profile && user.profile.role;
@@ -54,6 +55,11 @@
     } catch (error) {
       return `${code} ${value.toLocaleString()}`;
     }
+  }
+
+  function enrollmentIsActive(enrollment) {
+    if (!enrollment) return false;
+    return !enrollment.expires_at || new Date(enrollment.expires_at).getTime() > Date.now();
   }
 
   function profileLabel(profile, fallbackId) {
@@ -269,11 +275,28 @@
       ? groupedLessonMarkup(data || [])
       : `<p class="py-4 text-sm text-slate-400">No lessons uploaded yet.</p>`;
 
+    bindLessonListActions(list, data || []);
+  }
+
+  function bindLessonListActions(list, lessons) {
     list.querySelectorAll("[data-edit-lesson]").forEach((btn) => {
-      btn.addEventListener("click", () => startLessonEdit((data || []).find((lesson) => lesson.id === btn.getAttribute("data-edit-lesson"))));
+      btn.addEventListener("click", () => startLessonEdit(lessons.find((lesson) => lesson.id === btn.getAttribute("data-edit-lesson"))));
     });
     list.querySelectorAll("[data-delete-lesson]").forEach((btn) => {
       btn.addEventListener("click", async () => deleteLesson(btn.getAttribute("data-delete-lesson")));
+    });
+    list.querySelectorAll("[data-toggle-lesson-course]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const courseId = btn.getAttribute("data-toggle-lesson-course");
+        if (!courseId) return;
+        if (expandedLessonCourses.has(courseId)) {
+          expandedLessonCourses.delete(courseId);
+        } else {
+          expandedLessonCourses.add(courseId);
+        }
+        list.innerHTML = groupedLessonMarkup(lessons);
+        bindLessonListActions(list, lessons);
+      });
     });
   }
 
@@ -286,19 +309,37 @@
     const courses = new Map();
     lessons.forEach((lesson) => {
       const course = adminCourses.find((item) => item.id === lesson.course_id);
+      const courseId = lesson.course_id || course?.id || "uncategorized";
       const courseTitle = course ? course.title : lesson.course_id;
       const chapter = lesson.chapter_title || "General";
       const chapterOrder = Number(lesson.chapter_order || 1);
-      if (!courses.has(courseTitle)) courses.set(courseTitle, new Map());
-      const chapters = courses.get(courseTitle);
+      if (!courses.has(courseId)) courses.set(courseId, { title: courseTitle, chapters: new Map() });
+      const chapters = courses.get(courseId).chapters;
       if (!chapters.has(chapter)) chapters.set(chapter, { order: chapterOrder, rows: [] });
       chapters.get(chapter).rows.push(lesson);
     });
 
-    return [...courses.entries()].map(([courseTitle, chapters]) => `
-      <div class="py-5">
-        <h3 class="font-bold text-slate-900">${escapeHtml(courseTitle)}</h3>
-        <div class="mt-3 space-y-3">
+    return [...courses.entries()].map(([courseId, course]) => {
+      const chapters = course.chapters;
+      const chapterCount = chapters.size;
+      const lessonCount = [...chapters.values()].reduce((total, group) => total + group.rows.length, 0);
+      const isExpanded = expandedLessonCourses.has(courseId);
+      const bodyId = `admin-lessons-course-${String(courseId).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+      return `
+      <div class="py-3">
+        <button type="button" data-toggle-lesson-course="${escapeHtml(courseId)}" aria-expanded="${isExpanded ? "true" : "false"}" aria-controls="${bodyId}" class="w-full rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-4 py-3 text-left transition-colors">
+          <span class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <span>
+              <span class="block font-bold text-slate-900">${escapeHtml(course.title)}</span>
+              <span class="mt-1 block text-xs text-slate-400">${chapterCount} chapter${chapterCount === 1 ? "" : "s"} - ${lessonCount} lesson${lessonCount === 1 ? "" : "s"}</span>
+            </span>
+            <span class="inline-flex items-center gap-2 text-sm font-semibold text-brand-700">
+              <span class="text-lg leading-none">${isExpanded ? "-" : "+"}</span>
+              ${isExpanded ? "Collapse" : "Expand"}
+            </span>
+          </span>
+        </button>
+        <div id="${bodyId}" class="${isExpanded ? "mt-3" : "hidden"} space-y-3">
           ${[...chapters.entries()].sort((a, b) => a[1].order - b[1].order).map(([chapter, group]) => `
             <div class="rounded-lg border border-slate-100 bg-slate-50 p-4">
               <p class="text-xs font-technical uppercase text-slate-400">Chapter ${group.order}: ${escapeHtml(chapter)}</p>
@@ -324,7 +365,8 @@
           `).join("")}
         </div>
       </div>
-    `).join("");
+    `;
+    }).join("");
   }
 
   function startLessonEdit(lesson) {
@@ -909,24 +951,28 @@
           ${adminCourses
             .map((course) => {
               const enrollment = enrollmentMap.get(course.id);
-              const hasAccess = !!enrollment;
+              const hasAccess = enrollmentIsActive(enrollment);
+              const expired = enrollment && !hasAccess;
               const expires = enrollment?.expires_at ? new Date(enrollment.expires_at).toLocaleDateString() : "No expiry";
               return `
                 <div class="rounded-lg border border-slate-100 px-4 py-3">
                   <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                     <div>
                       <span class="text-sm font-semibold text-slate-700">${course.title}</span>
-                      <span class="block mt-1 text-xs text-slate-400">Access: ${hasAccess ? expires : "not granted"}</span>
+                      <span class="block mt-1 text-xs ${expired ? "text-red-500" : "text-slate-400"}">Access: ${hasAccess ? expires : expired ? `expired ${expires}` : "not granted"}</span>
                     </div>
                     <div class="flex flex-col sm:flex-row sm:items-center gap-2">
                       ${
                         hasAccess
                           ? ""
                           : `<select data-access-duration="${course.id}" class="rounded-lg border border-slate-200 px-3 py-2 text-xs">
+                              <option value="1d">1 day</option>
+                              <option value="2d">2 days</option>
+                              <option value="1w">1 week</option>
                               <option value="2m">2 months</option>
                               <option value="6m">6 months</option>
                               <option value="1y">1 year</option>
-                              <option value="none">No expiry</option>
+                              <option value="none">Lifetime access</option>
                               <option value="custom">Custom date</option>
                             </select>
                             <input data-access-custom-date="${course.id}" type="date" class="hidden rounded-lg border border-slate-200 px-3 py-2 text-xs" />`
@@ -980,6 +1026,9 @@
       return date ? new Date(`${date}T23:59:59`).toISOString() : null;
     }
     const expires = new Date();
+    if (value === "1d") expires.setDate(expires.getDate() + 1);
+    if (value === "2d") expires.setDate(expires.getDate() + 2);
+    if (value === "1w") expires.setDate(expires.getDate() + 7);
     if (value === "2m") expires.setMonth(expires.getMonth() + 2);
     if (value === "6m") expires.setMonth(expires.getMonth() + 6);
     if (value === "1y") expires.setFullYear(expires.getFullYear() + 1);
@@ -987,11 +1036,14 @@
   }
 
   async function grantAccess(userId, courseId, expiresAt) {
-    const { error } = await window.MKV_SUPABASE.client.from("enrollments").upsert({
-      user_id: userId,
-      course_id: courseId,
-      expires_at: expiresAt,
-    });
+    const { error } = await window.MKV_SUPABASE.client.from("enrollments").upsert(
+      {
+        user_id: userId,
+        course_id: courseId,
+        expires_at: expiresAt,
+      },
+      { onConflict: "user_id,course_id" }
+    );
     if (error) {
       window.alert(error.message);
       return;

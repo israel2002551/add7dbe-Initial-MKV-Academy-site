@@ -413,7 +413,9 @@ begin
   insert into public.enrollments (user_id, course_id, order_id)
   values (p_user_id, p_course_id, v_order_id)
   on conflict (user_id, course_id)
-  do update set order_id = excluded.order_id;
+  do update set
+    order_id = excluded.order_id,
+    expires_at = null;
 
   insert into public.notifications (user_id, type, title, body, action_url)
   values (
@@ -536,6 +538,7 @@ as $$
         select 1 from public.enrollments
         where enrollments.user_id = auth.uid()
           and enrollments.course_id = q.course_id
+          and (enrollments.expires_at is null or enrollments.expires_at > now())
       )
     )
   group by q.id;
@@ -679,6 +682,7 @@ using (
     select 1 from public.enrollments
     where enrollments.user_id = auth.uid()
       and enrollments.course_id = lessons.course_id
+      and (enrollments.expires_at is null or enrollments.expires_at > now())
   )
 );
 
@@ -796,6 +800,7 @@ with check (
     select 1 from public.enrollments
     where enrollments.user_id = auth.uid()
       and enrollments.course_id = assignment_submissions.course_id
+      and (enrollments.expires_at is null or enrollments.expires_at > now())
   )
 );
 
@@ -894,6 +899,7 @@ using (
     select 1 from public.enrollments
     where enrollments.user_id = auth.uid()
       and enrollments.course_id = quizzes.course_id
+      and (enrollments.expires_at is null or enrollments.expires_at > now())
   )
   or public.is_instructor()
 );
@@ -911,6 +917,7 @@ using (
     join public.enrollments on enrollments.course_id = quizzes.course_id
     where quizzes.id = quiz_questions.quiz_id
       and enrollments.user_id = auth.uid()
+      and (enrollments.expires_at is null or enrollments.expires_at > now())
   )
   or public.is_instructor()
 );
@@ -1043,6 +1050,7 @@ using (
       join public.enrollments on enrollments.course_id = lessons.course_id
       where lessons.video_path = storage.objects.name
         and enrollments.user_id = auth.uid()
+        and (enrollments.expires_at is null or enrollments.expires_at > now())
     )
   )
 );
@@ -1059,6 +1067,7 @@ using (
       join public.enrollments on enrollments.course_id = lessons.course_id
       where lessons.assignment_path = storage.objects.name
         and enrollments.user_id = auth.uid()
+        and (enrollments.expires_at is null or enrollments.expires_at > now())
     )
   )
 );
@@ -1075,6 +1084,7 @@ using (
       join public.enrollments on enrollments.course_id = lessons.course_id
       where lessons.resource_path = storage.objects.name
         and enrollments.user_id = auth.uid()
+        and (enrollments.expires_at is null or enrollments.expires_at > now())
     )
   )
 );
