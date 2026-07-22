@@ -6,8 +6,10 @@
 
 (function () {
   const PROGRESS_STORAGE_KEY = "mkv-course-progress";
+  const REVIEW_CLEAR_STORAGE_KEY = "mkv-cleared-review-newsletter";
   let remoteProgress = {};
   let submissionStatus = {};
+  let reviewNewsletterOpen = true;
 
   const LOCAL_PREVIEW_COURSES = [
     {
@@ -77,6 +79,32 @@
         ${detail ? `<p class="mt-2 text-sm text-slate-500">${detail}</p>` : ""}
       </div>
     `;
+  }
+
+  function escapeHtml(value) {
+    return String(value || "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
+    })[char]);
+  }
+
+  function loadClearedReviewIds() {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(REVIEW_CLEAR_STORAGE_KEY) || "[]"));
+    } catch (e) {
+      return new Set();
+    }
+  }
+
+  function saveClearedReviewIds(ids) {
+    try {
+      localStorage.setItem(REVIEW_CLEAR_STORAGE_KEY, JSON.stringify([...ids]));
+    } catch (e) {
+      /* localStorage unavailable */
+    }
   }
 
   async function getPaidCourses(userId) {
@@ -157,6 +185,38 @@
     (data || []).forEach((row) => {
       if (!submissionStatus[row.lesson_id]) submissionStatus[row.lesson_id] = row;
     });
+  }
+
+  async function loadCourseTitleMap(courseIds) {
+    const uniqueIds = [...new Set((courseIds || []).filter(Boolean))];
+    const fallback = new Map(uniqueIds.map((id) => [id, id]));
+    if (!uniqueIds.length || !window.MKV_SUPABASE?.isConfigured) return fallback;
+
+    const { data, error } = await window.MKV_SUPABASE.client
+      .from("courses")
+      .select("id, title")
+      .in("id", uniqueIds);
+
+    if (error) return fallback;
+    (data || []).forEach((course) => fallback.set(course.id, course.title || course.id));
+    return fallback;
+  }
+
+  async function loadReviewerMap(reviewerIds) {
+    const uniqueIds = [...new Set((reviewerIds || []).filter(Boolean))];
+    const fallback = new Map(uniqueIds.map((id) => [id, "MKV Academy reviewer"]));
+    if (!uniqueIds.length || !window.MKV_SUPABASE?.isConfigured) return fallback;
+
+    const { data, error } = await window.MKV_SUPABASE.client
+      .from("profiles")
+      .select("id, full_name, email, role")
+      .in("id", uniqueIds);
+
+    if (error) return fallback;
+    (data || []).forEach((profile) => {
+      fallback.set(profile.id, profile.full_name || profile.email || "MKV Academy reviewer");
+    });
+    return fallback;
   }
 
   function isUnlocked(course, lesson) {
@@ -328,7 +388,7 @@
                   <p class="font-semibold text-slate-900">Overall Course Assessment</p>
                   <p class="mt-1 text-sm text-slate-600">Submit your final CAD files, reports, or ZIP package for instructor grading when you complete the course.</p>
                 </div>
-                <a href="#project-review" class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">Submit Final Project</a>
+                <button type="button" data-portal-jump="project-review" class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">Submit Final Project</button>
               </div>
             </div>
           </div>
@@ -338,6 +398,13 @@
   }
 
   function bindPortalActions(courses) {
+    document.querySelectorAll("[data-portal-jump]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        showPortalView(btn.getAttribute("data-portal-jump"));
+        document.getElementById("student-portal-page")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+
     document.querySelectorAll("[data-progress-toggle]").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const lessonId = btn.getAttribute("data-lesson-id");
@@ -468,6 +535,7 @@
     }
 
     await loadSubmissionStatus(user.id);
+    loadReviewNewsletter();
     renderCourses(courses);
   }
 
@@ -504,6 +572,7 @@
     }
     form.reset();
     if (status) status.textContent = "Project submitted. A mentor will review it from the admin dashboard.";
+    loadReviewNewsletter();
   }
 
   async function uploadReviewFile(basePath, file) {
@@ -578,6 +647,118 @@
     bindPortalActions(courses);
   }
 
+  function reviewItemMarkup(item) {
+    const reviewedAt = item.reviewed_at ? new Date(item.reviewed_at).toLocaleDateString() : "";
+    return `
+      <article class="mkv-card p-5">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+          <div>
+            <p class="text-xs font-technical uppercase text-brand-700">${escapeHtml(item.course_title)}</p>
+            <h3 class="mt-1 font-bold text-slate-900">${escapeHtml(item.title)}</h3>
+            <p class="mt-1 text-xs text-slate-400">${escapeHtml(item.kind)}${reviewedAt ? ` - Reviewed ${reviewedAt}` : ""}</p>
+          </div>
+          <span class="inline-flex w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">${escapeHtml(item.status)}</span>
+        </div>
+        ${item.grade ? `<p class="mt-3 text-sm font-semibold text-slate-700">Grade: ${escapeHtml(item.grade)}</p>` : ""}
+        <div class="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-4">
+          <p class="text-xs font-semibold text-slate-500">Reviewer</p>
+          <p class="mt-1 text-sm font-semibold text-slate-900">${escapeHtml(item.reviewer_name)}</p>
+          <p class="mt-3 text-sm leading-relaxed text-slate-600">${escapeHtml(item.feedback)}</p>
+        </div>
+      </article>
+    `;
+  }
+
+  async function loadReviewNewsletter() {
+    const wrap = document.getElementById("student-review-newsletter");
+    const refreshBtn = document.getElementById("student-review-refresh");
+    const toggleBtn = document.getElementById("student-review-toggle");
+    const user = window.MKV_CURRENT_USER;
+
+    if (toggleBtn) toggleBtn.textContent = reviewNewsletterOpen ? "Close" : "Open";
+    if (!wrap) return;
+    wrap.classList.toggle("hidden", !reviewNewsletterOpen);
+    if (!reviewNewsletterOpen) return;
+
+    if (!user || !window.MKV_SUPABASE?.isConfigured || user.id === "local-preview-user") {
+      wrap.innerHTML = emptyState("Review messages will appear here after Supabase is configured.");
+      return;
+    }
+
+    if (refreshBtn) {
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = "Refreshing...";
+    }
+
+    try {
+      wrap.innerHTML = `<p class="text-sm text-slate-400 py-4">Loading review messages...</p>`;
+      const [assignmentResult, projectResult] = await Promise.all([
+        window.MKV_SUPABASE.client
+          .from("assignment_submissions")
+          .select("id, course_id, lesson_id, status, grade, feedback, reviewed_by, reviewed_at, created_at, lessons(title)")
+          .eq("user_id", user.id)
+          .not("feedback", "is", null)
+          .order("reviewed_at", { ascending: false }),
+        window.MKV_SUPABASE.client
+          .from("project_review_submissions")
+          .select("id, subject, status, feedback, reviewed_by, reviewed_at, created_at")
+          .eq("user_id", user.id)
+          .not("feedback", "is", null)
+          .order("reviewed_at", { ascending: false }),
+      ]);
+
+      if (assignmentResult.error) throw assignmentResult.error;
+      if (projectResult.error) throw projectResult.error;
+
+      const assignments = assignmentResult.data || [];
+      const projects = projectResult.data || [];
+      const courseTitles = await loadCourseTitleMap(assignments.map((item) => item.course_id));
+      const reviewerMap = await loadReviewerMap([...assignments, ...projects].map((item) => item.reviewed_by));
+      const cleared = loadClearedReviewIds();
+
+      const items = [
+        ...assignments.map((item) => {
+          const lesson = Array.isArray(item.lessons) ? item.lessons[0] : item.lessons;
+          return {
+            id: `assignment:${item.id}`,
+            kind: "Assignment review",
+            title: lesson?.title || "Assignment submission",
+            course_title: courseTitles.get(item.course_id) || item.course_id || "Course",
+            status: item.status || "reviewed",
+            grade: item.grade || "",
+            feedback: item.feedback || "",
+            reviewer_name: reviewerMap.get(item.reviewed_by) || "MKV Academy reviewer",
+            reviewed_at: item.reviewed_at || item.created_at,
+          };
+        }),
+        ...projects.map((item) => ({
+          id: `project:${item.id}`,
+          kind: "Project review",
+          title: item.subject || "Project review",
+          course_title: "Project Review",
+          status: item.status || "reviewed",
+          grade: "",
+          feedback: item.feedback || "",
+          reviewer_name: reviewerMap.get(item.reviewed_by) || "MKV Academy reviewer",
+          reviewed_at: item.reviewed_at || item.created_at,
+        })),
+      ]
+        .filter((item) => item.feedback && !cleared.has(item.id))
+        .sort((a, b) => new Date(b.reviewed_at || 0).getTime() - new Date(a.reviewed_at || 0).getTime());
+
+      wrap.innerHTML = items.length
+        ? items.map(reviewItemMarkup).join("")
+        : emptyState("No review messages yet.", "Instructor and admin comments will appear here after your submissions are reviewed.");
+    } catch (error) {
+      wrap.innerHTML = emptyState("We could not load review messages right now.", error.message);
+    } finally {
+      if (refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = "Refresh";
+      }
+    }
+  }
+
   async function verifyPaymentReturn() {
     if (!window.MKV_SUPABASE?.isConfigured || !window.MKV_CURRENT_USER) return null;
 
@@ -631,6 +812,7 @@
       loadCertificates();
       loadReferrals();
       loadQuizzes();
+      loadReviewNewsletter();
     } catch (error) {
       list.innerHTML = emptyState("We could not load your dashboard right now.", error.message);
     } finally {
@@ -791,6 +973,64 @@
     });
   }
 
+  function showPortalView(viewName) {
+    const target = viewName || "overview";
+    document.querySelectorAll("[data-portal-view]").forEach((view) => {
+      view.classList.toggle("hidden", view.getAttribute("data-portal-view") !== target);
+    });
+    const select = document.getElementById("student-portal-page");
+    if (select && select.value !== target) select.value = target;
+  }
+
+  function bindPortalViews() {
+    const select = document.getElementById("student-portal-page");
+    if (!select) return;
+    select.addEventListener("change", () => {
+      showPortalView(select.value);
+      if (select.value === "courses") initMyCourses();
+      if (select.value === "newsletter") loadReviewNewsletter();
+      if (select.value === "certificates") loadCertificates();
+      if (select.value === "referrals") loadReferrals();
+      if (select.value === "quizzes") loadQuizzes();
+    });
+    showPortalView("overview");
+  }
+
+  function bindReviewNewsletterControls() {
+    document.getElementById("student-review-refresh")?.addEventListener("click", loadReviewNewsletter);
+    document.getElementById("student-review-toggle")?.addEventListener("click", () => {
+      reviewNewsletterOpen = !reviewNewsletterOpen;
+      loadReviewNewsletter();
+    });
+    document.getElementById("student-review-clear")?.addEventListener("click", async () => {
+      const wrap = document.getElementById("student-review-newsletter");
+      const user = window.MKV_CURRENT_USER;
+      if (!user || !window.MKV_SUPABASE?.isConfigured) {
+        if (wrap) wrap.innerHTML = emptyState("No review messages yet.");
+        return;
+      }
+
+      const [assignmentResult, projectResult] = await Promise.all([
+        window.MKV_SUPABASE.client
+          .from("assignment_submissions")
+          .select("id")
+          .eq("user_id", user.id)
+          .not("feedback", "is", null),
+        window.MKV_SUPABASE.client
+          .from("project_review_submissions")
+          .select("id")
+          .eq("user_id", user.id)
+          .not("feedback", "is", null),
+      ]);
+
+      const cleared = loadClearedReviewIds();
+      (assignmentResult.data || []).forEach((item) => cleared.add(`assignment:${item.id}`));
+      (projectResult.data || []).forEach((item) => cleared.add(`project:${item.id}`));
+      saveClearedReviewIds(cleared);
+      loadReviewNewsletter();
+    });
+  }
+
   /* ------------------------- STUDY TIMER ------------------------- */
 
   function initStudyTimer() {
@@ -913,6 +1153,8 @@
     setTimeout(() => {
       bindReferralForm();
       bindProjectReviewForm();
+      bindPortalViews();
+      bindReviewNewsletterControls();
       document.getElementById("student-refresh-courses")?.addEventListener("click", initMyCourses);
       document.getElementById("student-video-back")?.addEventListener("click", closeVideoPlayer);
       initMyCourses();

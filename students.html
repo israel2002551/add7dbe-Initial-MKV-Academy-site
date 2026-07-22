@@ -122,14 +122,43 @@
         <h1 class="mt-3 text-4xl font-extrabold tracking-tight text-slate-900">Welcome back, <span data-auth-name>Student</span></h1>
         <p class="mt-3 text-slate-600 max-w-xl">This is your home base for paid courses, private lesson videos, assignments, progress, and study tools.</p>
 
-        <div id="student-notifications" class="mt-8 space-y-3"></div>
+        <div class="mt-8 max-w-xl">
+          <label for="student-portal-page" class="block text-sm font-semibold text-slate-700 mb-2">Open portal page</label>
+          <select id="student-portal-page" class="w-full rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600">
+            <option value="overview">Overview</option>
+            <option value="courses">My Courses</option>
+            <option value="newsletter">Newsletter</option>
+            <option value="certificates">Certificates</option>
+            <option value="referrals">Referrals</option>
+            <option value="quizzes">Quizzes</option>
+            <option value="project-review">Project Review</option>
+          </select>
+        </div>
 
-        <div class="mt-10 grid lg:grid-cols-3 gap-6">
-          <section class="mkv-card p-6">
+        <section data-portal-view="newsletter" class="hidden mt-10">
+          <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Newsletter</h2>
+              <p class="mt-2 text-sm text-slate-600">Review responses from instructors and admins.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button id="student-review-toggle" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Close</button>
+              <button id="student-review-refresh" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Refresh</button>
+              <button id="student-review-clear" type="button" class="bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold rounded-lg px-4 py-2">Clear</button>
+            </div>
+          </div>
+          <div id="student-review-newsletter" class="mt-5 space-y-3"></div>
+        </section>
+
+        <section data-portal-view="certificates" class="hidden mt-10">
+          <div class="mkv-card p-6">
             <h2 class="font-bold text-slate-900">Certificates</h2>
             <div id="student-certificates" class="mt-4 text-sm text-slate-500">Loading certificates...</div>
-          </section>
-          <section class="mkv-card p-6">
+          </div>
+        </section>
+
+        <section data-portal-view="referrals" class="hidden mt-10">
+          <div class="mkv-card p-6">
             <h2 class="font-bold text-slate-900">Referrals</h2>
             <p class="mt-2 text-sm text-slate-500">Invite a friend and track signups.</p>
             <form id="student-referral-form" class="mt-4 flex flex-col sm:flex-row gap-2">
@@ -137,15 +166,18 @@
               <button class="bg-brand-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Invite</button>
             </form>
             <div id="student-referrals" class="mt-3 text-xs text-slate-400"></div>
-          </section>
-          <section class="mkv-card p-6">
+          </div>
+        </section>
+
+        <section data-portal-view="quizzes" class="hidden mt-10">
+          <div class="mkv-card p-6">
             <h2 class="font-bold text-slate-900">Quizzes</h2>
             <div id="student-quizzes" class="mt-4 text-sm text-slate-500">Loading quizzes...</div>
-          </section>
-        </div>
+          </div>
+        </section>
 
         <!-- MY COURSES -->
-        <div class="mt-12">
+        <section data-portal-view="courses" class="hidden mt-10">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <h2 class="text-xl font-bold text-slate-900">My Courses</h2>
             <div class="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -167,9 +199,9 @@
             <!-- Rendered by js/portal.js -->
           </div>
           <p class="mt-4 text-sm text-slate-500">Do not see a course you paid for? <a href="contact.html" class="text-brand-700 font-medium hover:text-brand-900">Let us know</a> and we will check the payment record.</p>
-        </div>
+        </section>
 
-        <div id="project-review" class="mt-14">
+        <section id="project-review" data-portal-view="project-review" class="hidden mt-10">
           <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div>
               <h2 class="text-xl font-bold text-slate-900">Project Review</h2>
@@ -199,10 +231,13 @@
               <p id="project-review-status" class="text-sm text-slate-500"></p>
             </div>
           </form>
-        </div>
+        </section>
 
-        <!-- STUDY TIMER -->
-        <div class="mt-14">
+        <section data-portal-view="overview" class="mt-12">
+          <div id="student-notifications" class="space-y-3"></div>
+
+          <!-- STUDY TIMER -->
+          <div class="mt-8">
           <h2 class="text-xl font-bold text-slate-900">Study Timer</h2>
           <div class="mt-5 mkv-card p-8 max-w-xl">
             <div class="flex flex-wrap gap-2">
@@ -224,8 +259,8 @@
           </div>
         </div>
 
-        <!-- OFFICE HOURS & COMMUNITY -->
-        <div class="mt-14 grid md:grid-cols-2 gap-6">
+          <!-- OFFICE HOURS & COMMUNITY -->
+          <div class="mt-14 grid md:grid-cols-2 gap-6">
           <div class="mkv-card p-6">
             <div class="h-11 w-11 rounded-lg bg-brand-50 text-brand-700 flex items-center justify-center mb-4">
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-5.13a4 4 0 11-8 0 4 4 0 018 0zm6 3a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
@@ -249,6 +284,7 @@
             </a>
           </div>
         </div>
+        </section>
 
         <div class="mt-12 pt-8 border-t border-slate-100">
           <button data-logout-trigger class="inline-flex items-center gap-2 text-slate-500 hover:text-slate-700 font-medium text-sm">
