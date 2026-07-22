@@ -11,6 +11,7 @@
   function show(allowed) {
     document.getElementById("instructor-denied")?.classList.toggle("hidden", allowed);
     document.getElementById("instructor-workspace")?.classList.toggle("hidden", !allowed);
+    document.getElementById("instructor-quizzes-panel")?.classList.toggle("hidden", !allowed);
     document.getElementById("instructor-submissions-panel")?.classList.toggle("hidden", !allowed);
   }
 
@@ -123,6 +124,88 @@
     bindSubmissionActions();
   }
 
+  async function loadQuizzes() {
+    const list = document.getElementById("instructor-quizzes-list");
+    if (!list || !window.MKV_SUPABASE?.client) return;
+    if (!instructorCourses.length) {
+      list.innerHTML = `<p class="py-4 text-sm text-slate-400">No assigned courses yet.</p>`;
+      return;
+    }
+
+    const courseIds = instructorCourses.map((course) => course.id);
+    list.innerHTML = `<p class="py-4 text-sm text-slate-400">Loading quizzes...</p>`;
+
+    const { data: quizzes, error } = await window.MKV_SUPABASE.client
+      .from("quizzes")
+      .select("id, course_id, title, pass_mark, is_active, created_at")
+      .in("course_id", courseIds)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      list.innerHTML = `<p class="py-4 text-sm text-red-600">${escapeHtml(error.message)}</p>`;
+      return;
+    }
+
+    const quizIds = (quizzes || []).map((quiz) => quiz.id);
+    const attemptCounts = new Map();
+    if (quizIds.length) {
+      const { data: attempts, error: attemptsError } = await window.MKV_SUPABASE.client
+        .from("quiz_attempts")
+        .select("quiz_id")
+        .in("quiz_id", quizIds);
+      if (!attemptsError) {
+        (attempts || []).forEach((attempt) => {
+          attemptCounts.set(attempt.quiz_id, (attemptCounts.get(attempt.quiz_id) || 0) + 1);
+        });
+      }
+    }
+
+    list.innerHTML = quizzes?.length
+      ? quizzes.map((quiz) => quizMarkup(quiz, attemptCounts.get(quiz.id) || 0)).join("")
+      : `<p class="py-4 text-sm text-slate-400">No quizzes have been sent yet.</p>`;
+    bindQuizActions();
+  }
+
+  function quizMarkup(quiz, attemptsCount) {
+    const course = instructorCourses.find((item) => item.id === quiz.course_id);
+    return `
+      <article class="py-5">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div>
+            <p class="font-semibold text-slate-900">${escapeHtml(quiz.title)}</p>
+            <p class="mt-1 text-xs text-slate-400">Course: ${escapeHtml(course?.title || quiz.course_id)} - Pass mark: ${Number(quiz.pass_mark || 0)}%</p>
+            <p class="mt-1 text-xs text-slate-400">${attemptsCount} answered - ${quiz.is_active ? "Visible to students" : "Inactive"}</p>
+          </div>
+          <button type="button" data-delete-quiz="${escapeHtml(quiz.id)}" class="self-start bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold rounded-lg px-4 py-2">
+            Delete Quiz
+          </button>
+        </div>
+      </article>
+    `;
+  }
+
+  function bindQuizActions() {
+    document.querySelectorAll("[data-delete-quiz]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!window.confirm("Delete this quiz and its student answers?")) return;
+        btn.disabled = true;
+        btn.textContent = "Deleting...";
+        const { error } = await window.MKV_SUPABASE.client
+          .from("quizzes")
+          .delete()
+          .eq("id", btn.getAttribute("data-delete-quiz"));
+        if (error) {
+          message(error.message, "error");
+          btn.disabled = false;
+          btn.textContent = "Delete Quiz";
+          return;
+        }
+        message("Quiz deleted.", "success");
+        await loadQuizzes();
+      });
+    });
+  }
+
   function renderSubmissionStats() {
     const stats = document.getElementById("instructor-submission-stats");
     if (!stats) return;
@@ -144,6 +227,7 @@
 
   async function refreshInstructorWorkspace() {
     await loadCourses();
+    await loadQuizzes();
     await loadSubmissions();
   }
 
@@ -264,6 +348,7 @@
       }
       form.reset();
       message("Quiz saved.", "success");
+      await loadQuizzes();
     });
   }
 
@@ -287,6 +372,7 @@
   document.addEventListener("DOMContentLoaded", () => {
     bindQuizForm();
     document.getElementById("instructor-refresh-courses")?.addEventListener("click", refreshInstructorWorkspace);
+    document.getElementById("instructor-refresh-quizzes")?.addEventListener("click", loadQuizzes);
     document.getElementById("instructor-refresh-submissions")?.addEventListener("click", loadSubmissions);
     document.getElementById("instructor-submission-status")?.addEventListener("change", loadSubmissions);
     setTimeout(init, 0);

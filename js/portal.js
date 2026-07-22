@@ -400,7 +400,13 @@
   function bindPortalActions(courses) {
     document.querySelectorAll("[data-portal-jump]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        showPortalView(btn.getAttribute("data-portal-jump"));
+        const target = btn.getAttribute("data-portal-jump");
+        const section = document.getElementById(target);
+        if (section) {
+          section.scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        }
+        showPortalView(target);
         document.getElementById("student-portal-page")?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
     });
@@ -989,11 +995,8 @@
       showPortalView(select.value);
       if (select.value === "courses") initMyCourses();
       if (select.value === "newsletter") loadReviewNewsletter();
-      if (select.value === "certificates") loadCertificates();
-      if (select.value === "referrals") loadReferrals();
-      if (select.value === "quizzes") loadQuizzes();
     });
-    showPortalView("overview");
+    showPortalView("courses");
   }
 
   function bindReviewNewsletterControls() {

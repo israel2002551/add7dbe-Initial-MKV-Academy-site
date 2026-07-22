@@ -93,37 +93,7 @@
     });
   }
 
-  const TRANSLATIONS = {
-    fr: {
-      "Home": "Accueil",
-      "Courses": "Cours",
-      "Services": "Services",
-      "About": "A propos",
-      "Community": "Communaute",
-      "Chat": "Chat",
-      "Contact": "Contact",
-      "Student Login": "Connexion etudiant",
-      "My Portal": "Mon portail",
-      "Admin": "Admin",
-      "Instructor": "Formateur",
-      "Instructor Dashboard": "Tableau formateur",
-      "Talk to Someone": "Parler a quelqu'un",
-      "Log Out": "Deconnexion",
-      "Explore Courses": "Explorer les cours",
-      "View All Courses": "Voir tous les cours",
-      "Preview": "Apercu",
-      "Enroll Now": "S'inscrire",
-      "Coming Soon": "Bientot disponible",
-      "Messages": "Messages",
-      "Conversations": "Conversations",
-      "New Conversation": "Nouvelle conversation",
-      "Delete": "Supprimer",
-      "Send": "Envoyer",
-      "Community options": "Options communaute",
-      "Check Community": "Voir communaute",
-      "Join the Meeting": "Rejoindre la reunion",
-    },
-  };
+  const SUPPORTED_LANGUAGES = ["en", "fr", "de", "es"];
 
   function initLanguageToggle() {
     const selects = [...document.querySelectorAll("[data-language-toggle]")];
@@ -134,25 +104,88 @@
     } catch (e) {
       /* ignore */
     }
+    if (!SUPPORTED_LANGUAGES.includes(lang)) lang = "en";
     selects.forEach((select) => {
       select.value = lang;
     });
 
+    function setTranslationCookie(nextLang) {
+      const value = nextLang === "en" ? "/en/en" : `/en/${nextLang}`;
+      const expires = nextLang === "en"
+        ? "Thu, 01 Jan 1970 00:00:00 GMT"
+        : "Fri, 31 Dec 9999 23:59:59 GMT";
+      document.cookie = `googtrans=${value}; expires=${expires}; path=/`;
+      if (window.location.hostname) {
+        document.cookie = `googtrans=${value}; expires=${expires}; path=/; domain=${window.location.hostname}`;
+      }
+    }
+
+    function syncGoogleTranslate(nextLang) {
+      const combo = document.querySelector(".goog-te-combo");
+      if (!combo) {
+        setTimeout(() => syncGoogleTranslate(nextLang), 500);
+        return;
+      }
+      const value = nextLang === "en" ? "" : nextLang;
+      if (combo.value === value) return;
+      combo.value = value;
+      combo.dispatchEvent(new Event("change"));
+    }
+
+    function loadGoogleTranslate(nextLang) {
+      if (!document.getElementById("google_translate_element")) {
+        const mount = document.createElement("div");
+        mount.id = "google_translate_element";
+        mount.className = "hidden";
+        document.body.appendChild(mount);
+      }
+      if (!document.querySelector("style[data-google-translate-style]")) {
+        const style = document.createElement("style");
+        style.setAttribute("data-google-translate-style", "true");
+        style.textContent = "#google_translate_element,.goog-te-banner-frame.skiptranslate{display:none!important;}body{top:0!important;}";
+        document.head.appendChild(style);
+      }
+
+      window.googleTranslateElementInit = function () {
+        if (!window.google?.translate?.TranslateElement) return;
+        new window.google.translate.TranslateElement({
+          pageLanguage: "en",
+          includedLanguages: SUPPORTED_LANGUAGES.filter((item) => item !== "en").join(","),
+          autoDisplay: false,
+        }, "google_translate_element");
+        syncGoogleTranslate(nextLang);
+      };
+
+      if (window.google?.translate?.TranslateElement) {
+        window.googleTranslateElementInit();
+        return;
+      }
+      if (!document.querySelector("script[data-google-translate]")) {
+        const script = document.createElement("script");
+        script.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+        script.async = true;
+        script.setAttribute("data-google-translate", "true");
+        document.head.appendChild(script);
+      }
+    }
+
     function applyLanguage(nextLang) {
+      if (!SUPPORTED_LANGUAGES.includes(nextLang)) nextLang = "en";
       document.documentElement.lang = nextLang;
       selects.forEach((select) => {
         select.value = nextLang;
-      });
-      const dictionary = TRANSLATIONS[nextLang] || {};
-      document.querySelectorAll("[data-i18n]").forEach((el) => {
-        const original = el.getAttribute("data-i18n");
-        el.textContent = dictionary[original] || original;
       });
       try {
         localStorage.setItem("mkv-language", nextLang);
       } catch (e) {
         /* ignore */
       }
+      setTranslationCookie(nextLang);
+      if (nextLang === "en") {
+        if (document.querySelector(".goog-te-combo")) syncGoogleTranslate(nextLang);
+        return;
+      }
+      loadGoogleTranslate(nextLang);
     }
 
     selects.forEach((select) => {

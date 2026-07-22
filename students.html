@@ -123,58 +123,12 @@
         <p class="mt-3 text-slate-600 max-w-xl">This is your home base for paid courses, private lesson videos, assignments, progress, and study tools.</p>
 
         <div class="mt-8 max-w-xl">
-          <label for="student-portal-page" class="block text-sm font-semibold text-slate-700 mb-2">Open portal page</label>
+          <label for="student-portal-page" class="block text-sm font-semibold text-slate-700 mb-2">Open packet page</label>
           <select id="student-portal-page" class="w-full rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600">
-            <option value="overview">Overview</option>
             <option value="courses">My Courses</option>
             <option value="newsletter">Newsletter</option>
-            <option value="certificates">Certificates</option>
-            <option value="referrals">Referrals</option>
-            <option value="quizzes">Quizzes</option>
-            <option value="project-review">Project Review</option>
           </select>
         </div>
-
-        <section data-portal-view="newsletter" class="hidden mt-10">
-          <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-            <div>
-              <h2 class="text-xl font-bold text-slate-900">Newsletter</h2>
-              <p class="mt-2 text-sm text-slate-600">Review responses from instructors and admins.</p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <button id="student-review-toggle" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Close</button>
-              <button id="student-review-refresh" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Refresh</button>
-              <button id="student-review-clear" type="button" class="bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold rounded-lg px-4 py-2">Clear</button>
-            </div>
-          </div>
-          <div id="student-review-newsletter" class="mt-5 space-y-3"></div>
-        </section>
-
-        <section data-portal-view="certificates" class="hidden mt-10">
-          <div class="mkv-card p-6">
-            <h2 class="font-bold text-slate-900">Certificates</h2>
-            <div id="student-certificates" class="mt-4 text-sm text-slate-500">Loading certificates...</div>
-          </div>
-        </section>
-
-        <section data-portal-view="referrals" class="hidden mt-10">
-          <div class="mkv-card p-6">
-            <h2 class="font-bold text-slate-900">Referrals</h2>
-            <p class="mt-2 text-sm text-slate-500">Invite a friend and track signups.</p>
-            <form id="student-referral-form" class="mt-4 flex flex-col sm:flex-row gap-2">
-              <input name="email" type="email" autocomplete="email" required placeholder="friend@email.com" class="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-              <button class="bg-brand-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Invite</button>
-            </form>
-            <div id="student-referrals" class="mt-3 text-xs text-slate-400"></div>
-          </div>
-        </section>
-
-        <section data-portal-view="quizzes" class="hidden mt-10">
-          <div class="mkv-card p-6">
-            <h2 class="font-bold text-slate-900">Quizzes</h2>
-            <div id="student-quizzes" class="mt-4 text-sm text-slate-500">Loading quizzes...</div>
-          </div>
-        </section>
 
         <!-- MY COURSES -->
         <section data-portal-view="courses" class="hidden mt-10">
@@ -201,7 +155,46 @@
           <p class="mt-4 text-sm text-slate-500">Do not see a course you paid for? <a href="contact.html" class="text-brand-700 font-medium hover:text-brand-900">Let us know</a> and we will check the payment record.</p>
         </section>
 
-        <section id="project-review" data-portal-view="project-review" class="hidden mt-10">
+        <section data-portal-view="newsletter" class="hidden mt-10">
+          <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Newsletter</h2>
+              <p class="mt-2 text-sm text-slate-600">Review responses from instructors and admins.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button id="student-review-toggle" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Close</button>
+              <button id="student-review-refresh" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Refresh</button>
+              <button id="student-review-clear" type="button" class="bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold rounded-lg px-4 py-2">Clear</button>
+            </div>
+          </div>
+          <div id="student-review-newsletter" class="mt-5 space-y-3"></div>
+        </section>
+
+        <div id="student-notifications" class="mt-8 space-y-3"></div>
+
+        <div class="mt-10 grid lg:grid-cols-3 gap-6">
+          <section class="mkv-card p-6">
+            <h2 class="font-bold text-slate-900">Certificates</h2>
+            <div id="student-certificates" class="mt-4 text-sm text-slate-500">Loading certificates...</div>
+          </section>
+
+          <section class="mkv-card p-6">
+            <h2 class="font-bold text-slate-900">Referrals</h2>
+            <p class="mt-2 text-sm text-slate-500">Invite a friend and track signups.</p>
+            <form id="student-referral-form" class="mt-4 flex flex-col sm:flex-row gap-2">
+              <input name="email" type="email" autocomplete="email" required placeholder="friend@email.com" class="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+              <button class="bg-brand-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Invite</button>
+            </form>
+            <div id="student-referrals" class="mt-3 text-xs text-slate-400"></div>
+          </section>
+
+          <section class="mkv-card p-6">
+            <h2 class="font-bold text-slate-900">Quizzes</h2>
+            <div id="student-quizzes" class="mt-4 text-sm text-slate-500">Loading quizzes...</div>
+          </section>
+        </div>
+
+        <section id="project-review" class="mt-14">
           <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div>
               <h2 class="text-xl font-bold text-slate-900">Project Review</h2>
@@ -233,11 +226,9 @@
           </form>
         </section>
 
-        <section data-portal-view="overview" class="mt-12">
-          <div id="student-notifications" class="space-y-3"></div>
-
+        <section class="mt-14">
           <!-- STUDY TIMER -->
-          <div class="mt-8">
+          <div>
           <h2 class="text-xl font-bold text-slate-900">Study Timer</h2>
           <div class="mt-5 mkv-card p-8 max-w-xl">
             <div class="flex flex-wrap gap-2">

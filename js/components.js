@@ -120,6 +120,8 @@ function mkvRenderNavbar() {
           <select id="language-toggle" data-language-toggle class="h-10 shrink-0 rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-600/20">
             <option value="en">EN</option>
             <option value="fr">FR</option>
+            <option value="de">DE</option>
+            <option value="es">ES</option>
           </select>
 
           <button data-login-trigger data-auth-logged-out type="button"
@@ -171,6 +173,8 @@ function mkvRenderNavbar() {
           <select data-language-toggle class="mx-4 mb-2 h-10 rounded-lg border border-slate-200 bg-white px-2 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-600/20">
             <option value="en">EN</option>
             <option value="fr">FR</option>
+            <option value="de">DE</option>
+            <option value="es">ES</option>
           </select>
 
           <button data-login-trigger data-auth-logged-out type="button"
