@@ -403,11 +403,13 @@
         const target = btn.getAttribute("data-portal-jump");
         const section = document.getElementById(target);
         if (section) {
+          const portalView = section.closest("[data-portal-view]");
+          if (portalView) showPortalView(portalView.getAttribute("data-portal-view"));
           section.scrollIntoView({ behavior: "smooth", block: "start" });
           return;
         }
         showPortalView(target);
-        document.getElementById("student-portal-page")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        document.getElementById("student-portal-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
     });
 
@@ -984,19 +986,44 @@
     document.querySelectorAll("[data-portal-view]").forEach((view) => {
       view.classList.toggle("hidden", view.getAttribute("data-portal-view") !== target);
     });
-    const select = document.getElementById("student-portal-page");
-    if (select && select.value !== target) select.value = target;
+    document.querySelectorAll("[data-portal-tab]").forEach((tab) => {
+      const active = tab.getAttribute("data-portal-tab") === target;
+      tab.setAttribute("aria-selected", active ? "true" : "false");
+      tab.classList.toggle("border-brand-600", active);
+      tab.classList.toggle("bg-brand-600", active);
+      tab.classList.toggle("text-white", active);
+      tab.classList.toggle("shadow-lg", active);
+      tab.classList.toggle("shadow-brand-600/20", active);
+      tab.classList.toggle("border-slate-200", !active);
+      tab.classList.toggle("bg-white", !active);
+      tab.classList.toggle("text-slate-700", !active);
+      tab.classList.toggle("shadow-sm", !active);
+      tab.querySelectorAll(".rounded-xl").forEach((icon) => {
+        icon.classList.toggle("bg-white/15", active);
+        icon.classList.toggle("text-white", active);
+        icon.classList.toggle("bg-brand-50", !active);
+        icon.classList.toggle("text-brand-700", !active);
+      });
+      const helper = tab.querySelector("[data-portal-tab-helper]");
+      if (helper) {
+        helper.classList.toggle("text-brand-50", active);
+        helper.classList.toggle("text-slate-500", !active);
+      }
+    });
   }
 
   function bindPortalViews() {
-    const select = document.getElementById("student-portal-page");
-    if (!select) return;
-    select.addEventListener("change", () => {
-      showPortalView(select.value);
-      if (select.value === "courses") initMyCourses();
-      if (select.value === "newsletter") loadReviewNewsletter();
+    const tabs = document.querySelectorAll("[data-portal-tab]");
+    if (!tabs.length) return;
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const target = tab.getAttribute("data-portal-tab") || "overview";
+        showPortalView(target);
+        if (target === "courses") initMyCourses();
+        if (target === "newsletter") loadReviewNewsletter();
+      });
     });
-    showPortalView("courses");
+    showPortalView("overview");
   }
 
   function bindReviewNewsletterControls() {
