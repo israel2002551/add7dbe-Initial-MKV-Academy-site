@@ -6,6 +6,7 @@
 
 (function () {
   let coursesCache = [];
+  let checkoutState = { course: null, coupon: null, discount: 0 };
   // Fallback mirrors data/courses.json; keep both in sync when editing content.
   const FALLBACK_COURSES = [
     { id: "solidworks-beginner-cswa", title: "SolidWorks: Beginner to CSWA", category: "SOLIDWORKS", level: "Beginner", duration: "6 Weeks", badge: "Popular", cardStyle: "brand", icon: "cube", paymentLink: "https://flutterwave.com/pay/hwtqgnslu4bd", description: "Learn fundamental 3D parametric modeling and master your first official certification.", highlights: ["Sketch Relations & Master Parametrics", "Bottom-up Assemblies & Drawings", "Live CSWA Prep & Practice Exam Mockups"] },
@@ -44,9 +45,8 @@
   function enrollCta(course) {
     if (window.MKV_SUPABASE && window.MKV_SUPABASE.isConfigured) {
       return `
-        <button type="button" data-start-checkout data-course-id="${course.id}" class="group/link inline-flex items-center gap-1 text-brand-700 font-semibold text-sm hover:text-brand-900">
-          Enroll Now
-          <svg class="w-4 h-4 icon-nudge" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        <button type="button" data-start-checkout data-course-id="${course.id}" class="inline-flex w-full items-center justify-center rounded-lg bg-brand-600 px-3 py-2 text-xs font-bold text-white transition-all hover:bg-brand-700">
+          Enroll
         </button>
       `;
     }
@@ -55,14 +55,13 @@
     // owner activates checkout for that course.
     if (course.paymentLink) {
       return `
-        <a href="${course.paymentLink}" class="group/link inline-flex items-center gap-1 text-brand-700 font-semibold text-sm hover:text-brand-900">
-          Enroll Now
-          <svg class="w-4 h-4 icon-nudge" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        <a href="${course.paymentLink}" class="inline-flex w-full items-center justify-center rounded-lg bg-brand-600 px-3 py-2 text-xs font-bold text-white transition-all hover:bg-brand-700">
+          Enroll
         </a>
       `;
     }
     return `
-      <span class="inline-flex items-center gap-1 text-slate-300 font-semibold text-sm cursor-not-allowed" title="Payment link coming soon">
+      <span class="inline-flex w-full items-center justify-center rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-400 cursor-not-allowed" title="Payment link coming soon">
         Coming Soon
       </span>
     `;
@@ -85,50 +84,30 @@
   }
 
   function courseCardMarkup(course) {
-    const highlights = course.highlights && course.highlights.length ? course.highlights : ["Private student dashboard", "Lesson videos and assignments", "Progress tracking after enrollment"];
     const thumbnail = course.thumbnailUrl
-      ? `<img src="${course.thumbnailUrl}" alt="" class="absolute inset-0 h-full w-full object-cover" loading="lazy" /><div class="absolute inset-0 bg-slate-950/45"></div>`
+      ? `<img src="${course.thumbnailUrl}" alt="" class="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />`
       : `<div class="absolute inset-0 opacity-20" style="background-image: linear-gradient(to right, rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.5) 1px, transparent 1px); background-size: 28px 28px;"></div>`;
     return `
-      <article class="mkv-card group grid md:grid-cols-[220px_1fr] min-h-[260px]" data-category="${course.category}" data-title="${course.title.toLowerCase()}">
-        <div class="relative overflow-hidden bg-gradient-to-br ${cardTopClass(course.cardStyle)} p-6 text-white">
+      <article class="mkv-card group flex min-w-0 cursor-pointer flex-col overflow-hidden transition-all hover:-translate-y-1 hover:shadow-xl" data-preview-course="${course.id}" data-category="${course.category}" data-title="${course.title.toLowerCase()}">
+        <div class="relative aspect-[4/3] overflow-hidden bg-gradient-to-br ${cardTopClass(course.cardStyle)} text-white">
           ${thumbnail}
-          <div class="relative z-10 flex h-full min-h-[210px] flex-col justify-between">
-            <div>
-              ${course.badge ? `<span class="inline-flex rounded-full bg-emerald-400 px-3 py-1 text-xs font-semibold text-slate-950">${course.badge}</span>` : `<span class="inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white">${course.level}</span>`}
+          <div class="absolute inset-0 bg-slate-950/20"></div>
+          <div class="relative z-10 flex h-full items-center justify-center p-3">
+            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 text-cyan-100 ring-1 ring-white/20 md:h-16 md:w-16">
+              <svg class="h-7 w-7 md:h-9 md:w-9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.4">${ICONS[course.icon] || ICONS.cube}</svg>
             </div>
-            <div class="mx-auto flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 text-cyan-100 ring-1 ring-white/15">
-              <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.4">${ICONS[course.icon] || ICONS.cube}</svg>
-            </div>
-            <p class="font-technical text-xs uppercase tracking-widest text-cyan-100">${course.category}</p>
           </div>
         </div>
-        <div class="bg-white p-6 flex min-w-0 flex-col">
-          <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p class="font-technical text-xs uppercase tracking-wide text-brand-700">${course.duration} Program</p>
-              <h3 class="mt-2 text-2xl font-extrabold tracking-tight text-slate-900">${course.title}</h3>
-              <p class="mt-2 text-sm leading-relaxed text-slate-600">${course.description}</p>
-            </div>
-            <div class="shrink-0 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-right">
-              <p class="text-[11px] font-semibold uppercase text-slate-400">Price</p>
-              <p class="mt-1 text-lg font-extrabold text-slate-900">${formatMoney(course.price, course.currency)}</p>
-              <p class="mt-1 text-[11px] font-semibold uppercase text-slate-400">${course.level}</p>
-            </div>
+        <div class="flex flex-1 flex-col bg-white p-2.5 md:p-4">
+          <div class="flex items-start justify-between gap-2">
+            <span class="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-bold text-brand-700 md:text-xs">${escapeText(course.level)}</span>
+            <span class="text-[10px] font-semibold text-slate-400 md:text-xs">${course.enrolledCount.toLocaleString()} students</span>
           </div>
-          <ul class="mt-5 grid gap-2 sm:grid-cols-2">
-            ${highlights.map((h) => `
-              <li class="flex items-start gap-2.5 text-sm text-slate-600">
-                <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
-                <span>${h}</span>
-              </li>`).join("")}
-          </ul>
-          <div class="mt-auto flex items-center justify-between gap-4 border-t border-slate-100 pt-5">
-            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">${course.highlights.length || 3} outcomes</span>
-            <div class="flex items-center gap-3">
-              <button type="button" data-preview-course="${course.id}" class="text-sm font-semibold text-slate-600 hover:text-brand-700"><span data-i18n="Preview">Preview</span></button>
-              ${enrollCta(course)}
-            </div>
+          <h3 class="mt-2 line-clamp-2 text-xs font-extrabold leading-snug text-slate-900 md:text-base">${escapeText(course.title)}</h3>
+          <p class="mt-1 line-clamp-2 text-[10px] leading-relaxed text-slate-500 md:text-sm">${escapeText(course.description)}</p>
+          <div class="mt-auto pt-3">
+            <p class="mb-2 text-xs font-extrabold text-slate-900 md:text-base">${formatMoney(course.price, course.currency)}</p>
+            ${enrollCta(course)}
           </div>
         </div>
       </article>
@@ -191,6 +170,18 @@
     `).join("")}</div>`;
   }
 
+  function courseObjectives(course) {
+    return course.objectives && course.objectives.length
+      ? course.objectives
+      : (course.highlights && course.highlights.length ? course.highlights : ["Build practical portfolio-ready skills", "Complete structured lessons and assignments", "Prepare for real engineering workflows"]);
+  }
+
+  function courseSkills(course) {
+    return course.skills && course.skills.length
+      ? course.skills
+      : [course.category, course.level, "Project workflow"].filter(Boolean);
+  }
+
   async function loadCourseSyllabus(courseId) {
     if (!window.MKV_SUPABASE?.isConfigured) return [];
     const { data, error } = await window.MKV_SUPABASE.client.rpc("get_public_course_syllabus", {
@@ -229,10 +220,32 @@
           <p class="mt-3 text-sm leading-relaxed text-slate-100">${escapeText(course.description)}</p>
         </div>
       </div>
-      <div class="grid gap-6 p-6 lg:grid-cols-[1fr_260px]">
-        <div>
-          <h3 class="text-lg font-bold text-slate-900">Course Syllabus</h3>
-          <div id="${syllabusId}" class="mt-4">${syllabusMarkup(course, [])}</div>
+      <div class="grid gap-6 p-6 lg:grid-cols-[1fr_280px]">
+        <div class="space-y-6">
+          <section>
+            <h3 class="text-lg font-bold text-slate-900">Full Description</h3>
+            <p class="mt-2 text-sm leading-relaxed text-slate-600">${escapeText(course.fullDescription || course.description)}</p>
+          </section>
+          <section>
+            <h3 class="text-lg font-bold text-slate-900">Learning Objectives</h3>
+            <ul class="mt-3 grid gap-2 sm:grid-cols-2">
+              ${courseObjectives(course).map((item) => `<li class="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">${escapeText(item)}</li>`).join("")}
+            </ul>
+          </section>
+          <section>
+            <h3 class="text-lg font-bold text-slate-900">Course Curriculum</h3>
+            <div id="${syllabusId}" class="mt-4">${syllabusMarkup(course, [])}</div>
+          </section>
+          <section>
+            <h3 class="text-lg font-bold text-slate-900">Skills To Be Gained</h3>
+            <div class="mt-3 flex flex-wrap gap-2">
+              ${courseSkills(course).map((skill) => `<span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">${escapeText(skill)}</span>`).join("")}
+            </div>
+          </section>
+          <section class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+            <h3 class="text-sm font-bold text-slate-900">Student Reviews</h3>
+            <p class="mt-2 text-sm text-slate-500">${course.rating ? `${escapeText(course.rating)} average rating from students.` : "Student reviews and ratings will appear here when enabled."}</p>
+          </section>
         </div>
         <aside class="rounded-xl border border-slate-100 bg-slate-50 p-5">
           <p class="text-xs font-semibold uppercase text-slate-400">Level</p>
@@ -241,7 +254,13 @@
           <p class="mt-1 font-bold text-slate-900">${escapeText(course.duration)}</p>
           <p class="mt-4 text-xs font-semibold uppercase text-slate-400">Instructor</p>
           <p class="mt-1 text-sm text-slate-600">MKV Academy instructor team</p>
-          <div class="mt-5">${enrollCta(course)}</div>
+          <p class="mt-4 text-xs font-semibold uppercase text-slate-400">Students Enrolled</p>
+          <p class="mt-1 font-bold text-slate-900">${course.enrolledCount.toLocaleString()}</p>
+          <p class="mt-4 text-xs font-semibold uppercase text-slate-400">Prerequisites</p>
+          <p class="mt-1 text-sm text-slate-600">${escapeText(course.prerequisites || "No strict prerequisites. Start at the listed difficulty level.")}</p>
+          <p class="mt-4 text-xs font-semibold uppercase text-slate-400">Price</p>
+          <p class="mt-1 text-2xl font-extrabold text-slate-900">${formatMoney(course.price, course.currency)}</p>
+          <div class="mt-5">${enrollCta(course).replace(">Enroll<", ">Enroll Now<")}</div>
         </aside>
       </div>
     `;
@@ -259,9 +278,154 @@
     document.getElementById("course-preview-modal")?.classList.add("hidden");
   }
 
+  function closeCheckout() {
+    document.getElementById("course-checkout-modal")?.classList.add("hidden");
+    checkoutState = { course: null, coupon: null, discount: 0 };
+  }
+
+  function checkoutTotal() {
+    const price = Number(checkoutState.course?.price || 0);
+    return Math.max(0, price - Number(checkoutState.discount || 0));
+  }
+
+  function checkoutMessage(message, type) {
+    const el = document.getElementById("checkout-coupon-message");
+    if (!el) return;
+    el.textContent = message || "";
+    el.className =
+      "mt-3 text-sm rounded-lg px-3 py-2 " +
+      (type === "success"
+        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+        : type === "error"
+          ? "bg-red-50 text-red-700 border border-red-200"
+          : "bg-slate-50 text-slate-500 border border-slate-100");
+  }
+
+  function renderCheckoutTotals() {
+    const discount = document.getElementById("checkout-discount");
+    const total = document.getElementById("checkout-total");
+    if (discount) discount.textContent = `-${formatMoney(checkoutState.discount, checkoutState.course?.currency)}`;
+    if (total) total.textContent = formatMoney(checkoutTotal(), checkoutState.course?.currency);
+  }
+
+  function openCheckout(courseId) {
+    const course = coursesCache.find((item) => item.id === courseId);
+    const modal = document.getElementById("course-checkout-modal");
+    const content = document.getElementById("course-checkout-content");
+    if (!course || !modal || !content) return;
+    checkoutState = { course, coupon: null, discount: 0 };
+    content.innerHTML = `
+      <div class="border-b border-slate-100 p-5">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="font-technical text-xs uppercase tracking-widest text-brand-700">Checkout</p>
+            <h2 class="mt-1 text-xl font-bold text-slate-900">${escapeText(course.title)}</h2>
+            <p class="mt-1 text-sm text-slate-500">${escapeText(course.level)} - ${escapeText(course.duration)}</p>
+          </div>
+          <button type="button" data-close-checkout class="rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">Close</button>
+        </div>
+      </div>
+      <div class="p-5">
+        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-slate-500">Course price</span>
+            <span class="font-bold text-slate-900">${formatMoney(course.price, course.currency)}</span>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-sm">
+            <span class="text-slate-500">Discount</span>
+            <span id="checkout-discount" class="font-bold text-emerald-600">-${formatMoney(0, course.currency)}</span>
+          </div>
+          <div class="mt-4 border-t border-slate-200 pt-4 flex items-center justify-between">
+            <span class="font-bold text-slate-900">Total</span>
+            <span id="checkout-total" class="text-2xl font-extrabold text-slate-900">${formatMoney(course.price, course.currency)}</span>
+          </div>
+        </div>
+        <div class="mt-5">
+          <label for="checkout-coupon-code" class="block text-sm font-semibold text-slate-700 mb-2">Coupon code</label>
+          <div class="flex gap-2">
+            <input id="checkout-coupon-code" autocomplete="off" placeholder="WELCOME20" class="min-w-0 flex-1 rounded-lg border border-slate-200 px-4 py-3 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+            <button type="button" data-apply-checkout-coupon class="rounded-lg bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 transition-all hover:bg-slate-200">Apply</button>
+          </div>
+          <p id="checkout-coupon-message" class="mt-3 hidden"></p>
+        </div>
+        <button type="button" data-confirm-checkout class="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-brand-600 px-5 py-3 font-bold text-white shadow-lg shadow-brand-600/25 transition-all hover:bg-brand-700">Enroll Now</button>
+      </div>
+    `;
+    modal.classList.remove("hidden");
+    content.querySelector("[data-close-checkout]")?.addEventListener("click", closeCheckout);
+    content.querySelector("[data-apply-checkout-coupon]")?.addEventListener("click", applyCheckoutCoupon);
+    content.querySelector("[data-confirm-checkout]")?.addEventListener("click", startCheckout);
+  }
+
+  async function applyCheckoutCoupon() {
+    const input = document.getElementById("checkout-coupon-code");
+    const btn = document.querySelector("[data-apply-checkout-coupon]");
+    const code = (input?.value || "").trim().toUpperCase();
+    checkoutState.coupon = null;
+    checkoutState.discount = 0;
+    renderCheckoutTotals();
+    if (!code) {
+      checkoutMessage("Enter a coupon code to apply it.", "error");
+      return;
+    }
+    if (!window.MKV_SUPABASE?.isConfigured) {
+      checkoutMessage("Coupon validation is available when Supabase is configured.", "error");
+      return;
+    }
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Checking...";
+    }
+    const { data, error } = await window.MKV_SUPABASE.client
+      .from("coupons")
+      .select("code, discount_type, discount_value, max_redemptions, redeemed_count, expires_at, is_active")
+      .eq("code", code)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Apply";
+    }
+    const expired = data?.expires_at && new Date(data.expires_at).getTime() < Date.now();
+    const maxed = data?.max_redemptions && Number(data.redeemed_count || 0) >= Number(data.max_redemptions);
+    if (error || !data || expired || maxed) {
+      checkoutMessage("This coupon is invalid, expired, or fully redeemed.", "error");
+      return;
+    }
+    const price = Number(checkoutState.course.price || 0);
+    const rawDiscount = data.discount_type === "percent"
+      ? (price * Number(data.discount_value || 0)) / 100
+      : Number(data.discount_value || 0);
+    checkoutState.coupon = data.code;
+    checkoutState.discount = Math.min(price, Math.max(0, rawDiscount));
+    renderCheckoutTotals();
+    checkoutMessage(`${data.code} applied. Your price has been updated.`, "success");
+  }
+
+  async function startCheckout(event) {
+    const btn = event.currentTarget;
+    if (!checkoutState.course) return;
+    btn.disabled = true;
+    btn.textContent = "Opening checkout...";
+    const { data, error } = await window.MKV_SUPABASE.client.functions.invoke("create-flutterwave-checkout", {
+      body: { course_id: checkoutState.course.id, coupon_code: checkoutState.coupon || "" },
+    });
+    btn.disabled = false;
+    btn.textContent = "Enroll Now";
+
+    if (error || !data || !data.payment_link) {
+      checkoutMessage((error && error.message) || (data && data.error) || "Could not start checkout.", "error");
+      return;
+    }
+    window.location.href = data.payment_link;
+  }
+
   function bindPreviewButtons() {
     document.querySelectorAll("[data-preview-course]").forEach((btn) => {
-      btn.addEventListener("click", () => openCoursePreview(btn.getAttribute("data-preview-course")));
+      btn.addEventListener("click", (event) => {
+        if (event.target.closest("[data-start-checkout]")) return;
+        openCoursePreview(btn.getAttribute("data-preview-course"));
+      });
     });
   }
 
@@ -274,21 +438,7 @@
       return;
     }
 
-    btn.disabled = true;
-    const original = btn.textContent;
-    btn.textContent = "Opening checkout...";
-    const coupon = window.prompt("Coupon code? Leave blank if you do not have one.", "") || "";
-    const { data, error } = await window.MKV_SUPABASE.client.functions.invoke("create-flutterwave-checkout", {
-      body: { course_id: btn.getAttribute("data-course-id"), coupon_code: coupon.trim() },
-    });
-    btn.disabled = false;
-    btn.textContent = original;
-
-    if (error || !data || !data.payment_link) {
-      window.alert((error && error.message) || (data && data.error) || "Could not start checkout.");
-      return;
-    }
-    window.location.href = data.payment_link;
+    openCheckout(btn.getAttribute("data-course-id"));
   });
 
   function populateCategoryFilter(courses) {
@@ -346,7 +496,13 @@
       paymentLink: course.paymentLink || course.payment_link || "",
       thumbnailUrl: getCourseThumbnailUrl(course),
       description: course.description || "A practical MKV Academy course with private lessons and assignments.",
+      fullDescription: course.full_description || course.fullDescription || course.description || "",
       highlights: course.highlights || [],
+      objectives: course.objectives || course.learning_objectives || [],
+      skills: course.skills || course.skills_gained || [],
+      prerequisites: course.prerequisites || "",
+      rating: course.rating || course.average_rating || "",
+      enrolledCount: Number(course.enrolled_count || course.enrolledCount || course.students_enrolled || 0),
       price: course.price ?? null,
       currency: course.currency || "NGN",
       lectures: course.lectures || [],
@@ -377,6 +533,8 @@
   document.addEventListener("click", (event) => {
     const modal = document.getElementById("course-preview-modal");
     if (modal && event.target === modal) closeCoursePreview();
+    const checkoutModal = document.getElementById("course-checkout-modal");
+    if (checkoutModal && event.target === checkoutModal) closeCheckout();
   });
 
   function loadFallbackCourses() {

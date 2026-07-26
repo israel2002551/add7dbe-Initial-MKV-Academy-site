@@ -8,12 +8,19 @@ create table if not exists public.profiles (
   full_name text,
   username text unique,
   email text,
+  avatar_url text,
+  is_online boolean not null default false,
+  last_active_at timestamptz,
   role text not null default 'student' check (role in ('student', 'instructor', 'admin', 'owner')),
   created_at timestamptz not null default now()
 );
 
 alter table public.profiles add column if not exists username text;
+alter table public.profiles add column if not exists avatar_url text;
+alter table public.profiles add column if not exists is_online boolean not null default false;
+alter table public.profiles add column if not exists last_active_at timestamptz;
 create unique index if not exists profiles_username_unique_idx on public.profiles(username);
+create index if not exists profiles_last_active_idx on public.profiles(last_active_at desc);
 
 create or replace function public.handle_new_user()
 returns trigger

@@ -64,7 +64,65 @@
 
   function profileLabel(profile, fallbackId) {
     if (!profile) return fallbackId || "Unknown user";
-    return profile.full_name || profile.email || fallbackId || profile.id || "Unknown user";
+    return profile.username || profile.full_name || profile.email || fallbackId || profile.id || "Unknown user";
+  }
+
+  function profileIsOnline(profile) {
+    if (!profile) return false;
+    const lastActive = profile.last_active_at ? new Date(profile.last_active_at).getTime() : 0;
+    return Boolean(profile.is_online) || (lastActive && Date.now() - lastActive < 5 * 60 * 1000);
+  }
+
+  function lastActiveLabel(profile) {
+    if (!profile?.last_active_at) return "No activity yet";
+    if (profileIsOnline(profile)) return "Online now";
+    const diff = Math.max(1, Math.round((Date.now() - new Date(profile.last_active_at).getTime()) / 60000));
+    return `Last active ${diff} min ago`;
+  }
+
+  function avatarMarkup(profile) {
+    const name = profileLabel(profile);
+    const initials = name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "MK";
+    const online = profileIsOnline(profile);
+    return `
+      <span class="relative h-11 w-11 shrink-0 rounded-full bg-brand-600 text-white">
+        ${profile?.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="" class="h-full w-full rounded-full object-cover" />` : `<span class="flex h-full w-full items-center justify-center rounded-full text-xs font-bold">${escapeHtml(initials)}</span>`}
+        ${online ? `<span class="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-emerald-500"></span>` : ""}
+      </span>
+    `;
+  }
+
+  async function loadOnlineUsers() {
+    const list = document.getElementById("admin-online-users");
+    const summary = document.getElementById("admin-online-summary");
+    if (!list || !window.MKV_SUPABASE?.client) return;
+    list.innerHTML = `<p class="col-span-full text-sm text-slate-400 py-4">Loading user activity...</p>`;
+    const { data, error } = await window.MKV_SUPABASE.client
+      .from("profiles")
+      .select("id, username, full_name, email, role, avatar_url, is_online, last_active_at")
+      .order("last_active_at", { ascending: false, nullsFirst: false })
+      .limit(24);
+    if (error) {
+      list.innerHTML = `<p class="col-span-full text-sm text-red-600 py-4">${escapeHtml(error.message)}</p>`;
+      return;
+    }
+    const users = data || [];
+    const activeCount = users.filter(profileIsOnline).length;
+    if (summary) summary.textContent = `${activeCount} active user${activeCount === 1 ? "" : "s"} right now`;
+    list.innerHTML = users.length
+      ? users.map((profile) => `
+        <article class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+          <div class="flex items-center gap-3">
+            ${avatarMarkup(profile)}
+            <div class="min-w-0">
+              <p class="truncate text-sm font-bold text-slate-900">${escapeHtml(profileLabel(profile))}</p>
+              <p class="truncate text-xs text-slate-400">${escapeHtml(profile.role || "user")}</p>
+            </div>
+          </div>
+          <p class="mt-3 text-xs font-semibold ${profileIsOnline(profile) ? "text-emerald-600" : "text-slate-400"}">${escapeHtml(lastActiveLabel(profile))}</p>
+        </article>
+      `).join("")
+      : `<p class="col-span-full text-sm text-slate-400 py-4">No user activity yet.</p>`;
   }
 
   async function loadProfilesMap(userIds) {
@@ -1527,6 +1585,7 @@
     await loadCourses();
     await loadCourseInstructorOptions();
     await loadAnalytics();
+    await loadOnlineUsers();
     await loadLessons();
     await loadLandingVideos();
     await loadCoupons();
@@ -1554,6 +1613,8 @@
     refreshLandingVideos && refreshLandingVideos.addEventListener("click", loadLandingVideos);
     const refreshAnalytics = document.getElementById("admin-refresh-analytics");
     refreshAnalytics && refreshAnalytics.addEventListener("click", loadAnalytics);
+    const refreshOnlineUsers = document.getElementById("admin-refresh-online-users");
+    refreshOnlineUsers && refreshOnlineUsers.addEventListener("click", loadOnlineUsers);
     const refreshReferrals = document.getElementById("admin-refresh-referrals");
     refreshReferrals && refreshReferrals.addEventListener("click", loadReferralAnalytics);
     const refreshCoupons = document.getElementById("admin-refresh-coupons");

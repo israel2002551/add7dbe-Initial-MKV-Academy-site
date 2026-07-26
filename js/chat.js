@@ -64,6 +64,31 @@
     return thread.subject;
   }
 
+  function isOnline(profile) {
+    if (!profile) return false;
+    if (profile.is_online === false) return false;
+    const lastActive = profile.last_active_at ? new Date(profile.last_active_at).getTime() : 0;
+    return Boolean(profile.is_online) || (lastActive && Date.now() - lastActive < 5 * 60 * 1000);
+  }
+
+  function lastSeen(profile) {
+    if (!profile?.last_active_at) return "Offline";
+    const diff = Math.max(1, Math.round((Date.now() - new Date(profile.last_active_at).getTime()) / 60000));
+    return isOnline(profile) ? "Online" : `Last active ${diff} min ago`;
+  }
+
+  function avatarMarkup(profile, sizeClass) {
+    const name = profile?.username || profile?.full_name || profile?.email || "MK";
+    const initials = name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+    const online = isOnline(profile);
+    return `
+      <span class="relative ${sizeClass || "h-11 w-11"} shrink-0 rounded-full bg-brand-600 text-white">
+        ${profile?.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="" class="h-full w-full rounded-full object-cover" />` : `<span class="flex h-full w-full items-center justify-center rounded-full text-xs font-bold">${escapeHtml(initials)}</span>`}
+        ${online ? `<span class="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-emerald-500"></span>` : ""}
+      </span>
+    `;
+  }
+
   function studentMeta(thread) {
     const parts = [thread.student_name, thread.student_email, thread.student_username, thread.student_id].filter(Boolean);
     return parts.join(" - ");
@@ -81,14 +106,19 @@
     list.innerHTML = threadsCache
       .map((thread) => {
         const active = thread.id === activeThreadId;
+        const profile = thread.student_profile;
         return `
           <button type="button" data-thread-id="${thread.id}"
-                  class="w-full text-left rounded-lg px-4 py-3 transition-colors ${
-                    active ? "bg-brand-50 text-brand-700" : "hover:bg-slate-50 text-slate-700"
+                  class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-all ${
+                    active ? "bg-white text-brand-700 shadow-sm ring-1 ring-brand-100" : "text-slate-700 hover:bg-white hover:shadow-sm"
                   }">
-            <span class="block text-sm font-semibold">${escapeHtml(threadTitle(thread))}</span>
-            ${isStaff(window.MKV_CURRENT_USER) ? `<span class="mt-1 block text-[11px] text-slate-400">${escapeHtml(studentMeta(thread))}</span>` : ""}
-            <span class="mt-1 block text-xs text-slate-400">${formatDate(thread.updated_at || thread.created_at)}</span>
+            ${avatarMarkup(profile, "h-11 w-11")}
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-sm font-bold">${escapeHtml(threadTitle(thread))}</span>
+              ${isStaff(window.MKV_CURRENT_USER) ? `<span class="mt-0.5 block truncate text-[11px] text-slate-400">${escapeHtml(studentMeta(thread))}</span>` : ""}
+              <span class="mt-1 block truncate text-xs text-slate-400">${escapeHtml(lastSeen(profile))} - ${formatDate(thread.updated_at || thread.created_at)}</span>
+            </span>
+            <span class="h-2 w-2 rounded-full ${active ? "bg-brand-600" : "bg-transparent"}"></span>
           </button>
         `;
       })
@@ -130,7 +160,7 @@
   async function hydrateThreadStudents(threads) {
     const ids = [...new Set(threads.map((thread) => thread.student_id).filter(Boolean))];
     if (!ids.length) return threads;
-    const { data } = await window.MKV_SUPABASE.client.from("profiles").select("id, username, full_name, email").in("id", ids);
+    const { data } = await window.MKV_SUPABASE.client.from("profiles").select("id, username, full_name, email, avatar_url, is_online, last_active_at").in("id", ids);
     const profileMap = new Map((data || []).map((profile) => [profile.id, profile]));
     return threads.map((thread) => {
       const profile = profileMap.get(thread.student_id);
@@ -139,6 +169,7 @@
         student_username: profile?.username || "",
         student_name: profile?.full_name || "",
         student_email: profile?.email || "",
+        student_profile: profile,
       };
     });
   }
@@ -146,7 +177,7 @@
   async function hydrateMessageSenders(messages) {
     const ids = [...new Set(messages.map((message) => message.sender_id).filter(Boolean))];
     if (!ids.length) return messages;
-    const { data } = await window.MKV_SUPABASE.client.from("profiles").select("id, username, full_name, role").in("id", ids);
+    const { data } = await window.MKV_SUPABASE.client.from("profiles").select("id, username, full_name, email, role, avatar_url, is_online, last_active_at").in("id", ids);
     const profileMap = new Map((data || []).map((profile) => [profile.id, profile]));
     return messages.map((message) => ({ ...message, sender_profile: profileMap.get(message.sender_id) }));
   }
@@ -164,14 +195,15 @@
     wrap.innerHTML = messages
       .map((message) => {
         const mine = message.sender_id === user.id;
-        const bubbleClass = mine ? "bg-brand-600 text-white ml-auto" : "bg-white text-slate-700 border border-slate-100";
+        const bubbleClass = mine ? "bg-brand-600 text-white ml-auto rounded-br-md" : "bg-white text-slate-700 border border-slate-100 rounded-bl-md";
         const metaClass = mine ? "text-brand-100" : "text-slate-400";
         const senderName = message.sender_profile?.username || message.sender_profile?.full_name || (mine ? "You" : "MKV Support");
         return `
-          <div class="max-w-[82%] ${mine ? "ml-auto text-right" : ""}">
-            <div class="inline-block rounded-xl px-4 py-3 ${bubbleClass}">
+          <div class="flex max-w-[88%] gap-2 ${mine ? "ml-auto flex-row-reverse text-right" : ""}">
+            ${avatarMarkup(message.sender_profile || (mine ? user.profile : null), "h-8 w-8")}
+            <div class="inline-block rounded-2xl px-4 py-3 shadow-sm ${bubbleClass}">
               <p class="text-sm leading-relaxed whitespace-pre-wrap">${escapeHtml(message.body)}</p>
-              <p class="mt-2 text-[11px] ${metaClass}">${escapeHtml(senderName)} - ${formatDate(message.created_at)}</p>
+              <p class="mt-2 text-[11px] ${metaClass}">${escapeHtml(senderName)} - ${formatDate(message.created_at)} - Sent</p>
             </div>
           </div>
         `;
@@ -192,7 +224,12 @@
       if (subject) subject.textContent = threadTitle(thread);
       if (meta) {
         const student = isStaff(window.MKV_CURRENT_USER) ? `${studentMeta(thread)} - ` : "";
-        meta.textContent = `${student}${thread.status} - ${formatDate(thread.updated_at || thread.created_at)}`;
+        meta.textContent = `${student}${lastSeen(thread.student_profile)} - ${thread.status} - ${formatDate(thread.updated_at || thread.created_at)}`;
+      }
+      const avatar = document.getElementById("chat-active-avatar");
+      if (avatar) {
+        avatar.className = "";
+        avatar.innerHTML = avatarMarkup(thread.student_profile, "h-11 w-11");
       }
     }
     if (form) form.classList.remove("hidden");

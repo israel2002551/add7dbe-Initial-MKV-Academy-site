@@ -30,6 +30,14 @@
     );
   }
 
+  function avatarUrl(user) {
+    return (user && user.profile && user.profile.avatar_url) || "";
+  }
+
+  function initials(user) {
+    return displayName(user).split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "MK";
+  }
+
   function generateUsername(fullName, email) {
     const base = String(fullName || (email || "").split("@")[0] || "student")
       .trim()
@@ -59,6 +67,13 @@
     document.querySelectorAll("[data-auth-name]").forEach((el) => {
       if (user) el.textContent = displayName(user);
     });
+    document.querySelectorAll("[data-auth-avatar]").forEach((el) => {
+      if (!user) return;
+      const image = avatarUrl(user);
+      el.innerHTML = image
+        ? `<img src="${image}" alt="" class="h-full w-full rounded-full object-cover" />`
+        : `<span class="flex h-full w-full items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">${initials(user)}</span>`;
+    });
 
     if (document.body.hasAttribute("data-requires-login")) {
       const gate = document.getElementById("login-gate");
@@ -73,6 +88,15 @@
     }
 
     document.dispatchEvent(new CustomEvent("mkv:auth-updated", { detail: { user } }));
+  }
+
+  async function markPresence(isOnline) {
+    const user = window.MKV_CURRENT_USER;
+    if (!user || !window.MKV_SUPABASE?.isConfigured) return;
+    await window.MKV_SUPABASE.client
+      .from("profiles")
+      .update({ is_online: isOnline, last_active_at: new Date().toISOString() })
+      .eq("id", user.id);
   }
 
   function showAuthMessage(message, type) {
@@ -234,7 +258,11 @@
             role: "student",
           });
         }
-        showAuthMessage("Account created. Check your email if confirmation is enabled, then log in.", "success");
+        showAuthMessage("Account created. Set up your profile to continue.", "success");
+        if (data.session) {
+          window.location.href = "profile.html?setup=1";
+          return;
+        }
         openAuthPanel("login");
       });
     });
@@ -297,11 +325,14 @@
     bindPasswordReset();
     initPasswordToggles();
     refreshUser();
+    setInterval(() => markPresence(true), 60000);
+    window.addEventListener("beforeunload", () => markPresence(false));
 
     if (window.MKV_SUPABASE && window.MKV_SUPABASE.client) {
       window.MKV_SUPABASE.client.auth.onAuthStateChange((event) => {
         if (event === "PASSWORD_RECOVERY") handlePasswordRecovery();
         refreshUser();
+        setTimeout(() => markPresence(true), 500);
       });
     }
 
