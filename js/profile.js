@@ -59,7 +59,12 @@
     const { error } = await window.MKV_SUPABASE.client.storage
       .from("avatars")
       .upload(path, file, { cacheControl: "3600", upsert: true });
-    if (error) throw error;
+    if (error) {
+      if (String(error.message || "").toLowerCase().includes("bucket not found")) {
+        throw new Error("Avatar storage is not ready. Run database/upgrade-profile-presence.sql in Supabase, then try again.");
+      }
+      throw error;
+    }
     const { data } = window.MKV_SUPABASE.client.storage.from("avatars").getPublicUrl(path);
     return data?.publicUrl || "";
   }
