@@ -82,9 +82,9 @@
     const initials = name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
     const online = isOnline(profile);
     return `
-      <span class="relative ${sizeClass || "h-11 w-11"} shrink-0 rounded-full bg-brand-600 text-white">
-        ${profile?.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="" class="h-full w-full rounded-full object-cover" />` : `<span class="flex h-full w-full items-center justify-center rounded-full text-xs font-bold">${escapeHtml(initials)}</span>`}
-        ${online ? `<span class="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-emerald-500"></span>` : ""}
+      <span class="chat-avatar ${sizeClass || "chat-avatar-md"}">
+        ${profile?.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="" />` : `<span>${escapeHtml(initials)}</span>`}
+        ${online ? `<span class="chat-presence-dot"></span>` : ""}
       </span>
     `;
   }
@@ -112,7 +112,7 @@
                   class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-all ${
                     active ? "bg-white text-brand-700 shadow-sm ring-1 ring-brand-100" : "text-slate-700 hover:bg-white hover:shadow-sm"
                   }">
-            ${avatarMarkup(profile, "h-11 w-11")}
+            ${avatarMarkup(profile, "chat-avatar-md")}
             <span class="min-w-0 flex-1">
               <span class="block truncate text-sm font-bold">${escapeHtml(threadTitle(thread))}</span>
               ${isStaff(window.MKV_CURRENT_USER) ? `<span class="mt-0.5 block truncate text-[11px] text-slate-400">${escapeHtml(studentMeta(thread))}</span>` : ""}
@@ -199,9 +199,9 @@
         const metaClass = mine ? "text-brand-100" : "text-slate-400";
         const senderName = message.sender_profile?.username || message.sender_profile?.full_name || (mine ? "You" : "MKV Support");
         return `
-          <div class="flex max-w-[88%] gap-2 ${mine ? "ml-auto flex-row-reverse text-right" : ""}">
-            ${avatarMarkup(message.sender_profile || (mine ? user.profile : null), "h-8 w-8")}
-            <div class="inline-block rounded-2xl px-4 py-3 shadow-sm ${bubbleClass}">
+          <div class="chat-message-row flex gap-2 ${mine ? "ml-auto flex-row-reverse text-right" : ""}">
+            ${avatarMarkup(message.sender_profile || (mine ? user.profile : null), "chat-avatar-sm")}
+            <div class="chat-message-bubble inline-block rounded-2xl px-4 py-3 shadow-sm ${bubbleClass}">
               <p class="text-sm leading-relaxed whitespace-pre-wrap">${escapeHtml(message.body)}</p>
               <p class="mt-2 text-[11px] ${metaClass}">${escapeHtml(senderName)} - ${formatDate(message.created_at)} - Sent</p>
             </div>
@@ -229,7 +229,7 @@
       const avatar = document.getElementById("chat-active-avatar");
       if (avatar) {
         avatar.className = "";
-        avatar.innerHTML = avatarMarkup(thread.student_profile, "h-11 w-11");
+        avatar.innerHTML = avatarMarkup(thread.student_profile, "chat-avatar-md");
       }
     }
     if (form) form.classList.remove("hidden");

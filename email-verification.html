@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email Verification | MKV Academy</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 rx=%226%22 fill=%22%231d4ed8%22/></svg>" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: { brand: { 50: '#f0f7ff', 100: '#e0effe', 600: '#1d4ed8', 700: '#1d40b0', 900: '#1e3a8a' } },
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'], mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'] }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/utilities.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased">
+  <div id="loading-screen" aria-hidden="true"><div class="loader-mark">MKV</div></div>
+  <div id="scroll-progress"></div>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <div id="navbar"></div>
+
+  <main id="main-content">
+    <section class="min-h-[72vh] bg-gradient-to-br from-slate-900 via-brand-900 to-slate-900 pt-32 pb-20 text-white">
+      <div class="container-mkv max-w-2xl">
+        <span class="inline-flex items-center gap-2 rounded-full border border-brand-600/30 bg-brand-600/20 px-3.5 py-1.5 text-sm font-medium text-brand-100">
+          <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+          Secure Registration
+        </span>
+        <h1 id="verification-title" class="mt-6 text-3xl font-extrabold tracking-tight sm:text-5xl">Check your email</h1>
+        <p id="verification-copy" class="mt-4 max-w-xl leading-relaxed text-slate-300">We sent a verification link to your inbox. Open it within 24 hours to activate your MKV Academy account.</p>
+
+        <div class="mt-8 mkv-card bg-white p-6 text-slate-900">
+          <label for="verification-email" class="block text-sm font-semibold text-slate-700">Email address</label>
+          <input id="verification-email" type="email" placeholder="student@email.com" class="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
+          <div class="mt-4 flex flex-col gap-3 sm:flex-row">
+            <button id="resend-verification" type="button" class="inline-flex items-center justify-center rounded-xl bg-brand-600 px-5 py-3 font-bold text-white shadow-lg shadow-brand-600/25 transition-all hover:bg-brand-700">Resend Verification Email</button>
+            <a href="students.html" class="inline-flex items-center justify-center rounded-xl bg-slate-100 px-5 py-3 font-bold text-slate-700 transition-all hover:bg-slate-200">Go to Login</a>
+          </div>
+          <p id="verification-status" class="mt-4 hidden"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="footer"></div>
+  <script src="js/components.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/animations.js"></script>
+  <script src="js/darkmode.js"></script>
+  <script src="js/email-verification.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

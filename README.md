@@ -106,6 +106,17 @@ Lesson videos and assignments are not public links. The dashboard requests a
 temporary signed URL from Supabase Storage only when the logged-in student has
 access to the course.
 
+### Email Verification
+
+Registration uses Supabase Auth confirmation emails. Enable this in Supabase:
+
+- Authentication > Providers > Email > Confirm email: ON
+- Authentication > URL Configuration > Site URL: your production site URL
+- Authentication > Email Templates > Confirm signup: set a reasonable expiry, such as 24 hours
+
+The app redirects new signups to `email-verification.html`, blocks unverified
+sessions from gated pages, and provides a resend verification option.
+
 ## Admin Uploads
 
 `admin.html` is the owner/admin studio.

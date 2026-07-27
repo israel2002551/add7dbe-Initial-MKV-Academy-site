@@ -7,6 +7,7 @@
   const LOCAL_PREVIEW_USER = {
     id: "local-preview-user",
     email: "preview@local",
+    email_confirmed_at: new Date().toISOString(),
     user_metadata: { full_name: "Preview Student" },
     profile: { role: "student", full_name: "Preview Student" },
   };
@@ -47,6 +48,27 @@
     return `${base}${Math.floor(1000 + Math.random() * 9000)}`;
   }
 
+  function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email || "").trim());
+  }
+
+  function emailIsVerified(user) {
+    return Boolean(user && (user.email_confirmed_at || user.confirmed_at));
+  }
+
+  function verificationRedirectUrl() {
+    if (window.location.protocol === "file:") return window.location.href.split(/[?#]/)[0].replace(/[^/\\]*$/, "email-verification.html");
+    return `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, "")}email-verification.html`;
+  }
+
+  function rememberVerificationEmail(email) {
+    try {
+      window.localStorage.setItem("mkv_pending_verification_email", String(email || "").trim());
+    } catch (error) {
+      console.warn("Could not store pending verification email", error);
+    }
+  }
+
   function updateAuthUI(user) {
     window.MKV_CURRENT_USER = user;
 
@@ -78,7 +100,7 @@
     if (document.body.hasAttribute("data-requires-login")) {
       const gate = document.getElementById("login-gate");
       const content = document.getElementById("gated-content");
-      if (user) {
+      if (user && emailIsVerified(user)) {
         if (gate) gate.classList.add("hidden");
         if (content) content.classList.remove("hidden");
       } else {
@@ -117,7 +139,10 @@
     const message = error && error.message ? error.message : "Authentication failed.";
     const lower = message.toLowerCase();
     if (lower.includes("email not confirmed") || lower.includes("confirm")) {
-      return "Email not confirmed. Open the confirmation link sent to your email, or disable email confirmation in Supabase Authentication settings while testing.";
+      return "Email not verified. Open the verification link sent to your inbox before logging in.";
+    }
+    if (lower.includes("already registered") || lower.includes("already exists") || lower.includes("duplicate")) {
+      return "An account already exists with this email. Log in instead, or reset your password.";
     }
     if (lower.includes("invalid login credentials")) {
       return "Invalid email or password. Check the details and try again.";
@@ -164,6 +189,16 @@
     const { user } = await supa.getCurrentUser();
     if (!user) {
       updateAuthUI(null);
+      return;
+    }
+
+    if (!emailIsVerified(user)) {
+      rememberVerificationEmail(user.email);
+      await supa.client.auth.signOut();
+      updateAuthUI(null);
+      if (document.body.hasAttribute("data-requires-login") && !window.location.pathname.endsWith("email-verification.html")) {
+        window.location.href = `email-verification.html?email=${encodeURIComponent(user.email || "")}`;
+      }
       return;
     }
 
@@ -215,12 +250,27 @@
           return;
         }
         const formData = new FormData(form);
-        const { error } = await window.MKV_SUPABASE.client.auth.signInWithPassword({
-          email: formData.get("email"),
-          password: formData.get("password"),
+        const email = String(formData.get("email") || "").trim().toLowerCase();
+        const password = formData.get("password");
+        if (!isValidEmail(email)) {
+          showAuthMessage("Enter a valid email address.", "error");
+          return;
+        }
+        const { data, error } = await window.MKV_SUPABASE.client.auth.signInWithPassword({
+          email,
+          password,
         });
+        if (!error && data.user && !emailIsVerified(data.user)) {
+          await window.MKV_SUPABASE.client.auth.signOut();
+          rememberVerificationEmail(email);
+          showAuthMessage("Email not verified. Check your inbox for the verification link, or use Resend Verification Email below.", "error");
+          addResendVerificationLink(form, email);
+          return;
+        }
         if (error) {
+          rememberVerificationEmail(email);
           showAuthMessage(friendlyAuthError(error), "error");
+          if (String(error.message || "").toLowerCase().includes("confirm")) addResendVerificationLink(form, email);
           return;
         }
         showAuthMessage("Login successful. Opening your dashboard...", "success");
@@ -236,17 +286,28 @@
           return;
         }
         const formData = new FormData(form);
-        const fullName = formData.get("full_name");
-        const email = formData.get("email");
+        const fullName = String(formData.get("full_name") || "").trim();
+        const email = String(formData.get("email") || "").trim().toLowerCase();
         const password = formData.get("password");
+        if (!isValidEmail(email)) {
+          showAuthMessage("Enter a valid email address before creating an account.", "error");
+          return;
+        }
         const username = generateUsername(fullName, email);
         const { data, error } = await window.MKV_SUPABASE.client.auth.signUp({
           email,
           password,
-          options: { data: { full_name: fullName, username } },
+          options: {
+            data: { full_name: fullName, username },
+            emailRedirectTo: verificationRedirectUrl(),
+          },
         });
         if (error) {
           showAuthMessage(friendlyAuthError(error), "error");
+          return;
+        }
+        if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+          showAuthMessage("An account already exists with this email. Log in instead, or reset your password.", "error");
           return;
         }
         if (data.user) {
@@ -258,14 +319,46 @@
             role: "student",
           });
         }
-        showAuthMessage("Account created. Set up your profile to continue.", "success");
+        rememberVerificationEmail(email);
         if (data.session) {
-          window.location.href = "profile.html?setup=1";
-          return;
+          await window.MKV_SUPABASE.client.auth.signOut();
         }
-        openAuthPanel("login");
+        showAuthMessage("Verification email sent. Check your inbox and spam folder before logging in.", "success");
+        window.location.href = `email-verification.html?email=${encodeURIComponent(email)}`;
       });
     });
+  }
+
+  async function resendVerificationEmail(email) {
+    const targetEmail = String(email || "").trim().toLowerCase();
+    if (!isValidEmail(targetEmail)) {
+      showAuthMessage("Enter a valid email address so we can resend the verification link.", "error");
+      return;
+    }
+    if (!window.MKV_SUPABASE || !window.MKV_SUPABASE.client) {
+      showAuthMessage(window.MKV_SUPABASE ? window.MKV_SUPABASE.missingConfigMessage : "Supabase is not loaded.", "error");
+      return;
+    }
+    const { error } = await window.MKV_SUPABASE.client.auth.resend({
+      type: "signup",
+      email: targetEmail,
+      options: { emailRedirectTo: verificationRedirectUrl() },
+    });
+    if (error) {
+      showAuthMessage(friendlyAuthError(error), "error");
+      return;
+    }
+    rememberVerificationEmail(targetEmail);
+    showAuthMessage("Verification email resent. Check your inbox and spam folder.", "success");
+  }
+
+  function addResendVerificationLink(form, email) {
+    if (!form || form.querySelector("[data-resend-verification]")) return;
+    const row = document.createElement("div");
+    row.className = "mt-3 text-right";
+    row.innerHTML = '<button type="button" data-resend-verification class="text-sm font-semibold text-brand-700 hover:text-brand-900">Resend Verification Email</button>';
+    form.appendChild(row);
+    row.querySelector("[data-resend-verification]").addEventListener("click", () => resendVerificationEmail(email));
   }
 
   function bindPasswordReset() {
@@ -290,6 +383,10 @@
           ? emailInput.value.trim()
           : window.prompt("Enter the email address on your MKV Academy account.");
         if (!email) return;
+        if (!isValidEmail(email)) {
+          showAuthMessage("Enter a valid email address.", "error");
+          return;
+        }
 
         const { error } = await window.MKV_SUPABASE.client.auth.resetPasswordForEmail(email, {
           redirectTo: resetRedirectUrl(),
@@ -298,7 +395,7 @@
           showAuthMessage(friendlyAuthError(error), "error");
           return;
         }
-        showAuthMessage("Password reset link sent. Check your email and follow the link to create a new password.", "success");
+        showAuthMessage("If a verified account exists for that email, a password reset link has been sent.", "success");
       });
     });
   }
