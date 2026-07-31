@@ -154,6 +154,9 @@
     if (lower.includes("invalid login credentials")) {
       return "Invalid email or password. Check the details and try again.";
     }
+    if (lower.includes("rate limit")) {
+      return "Too many verification emails were requested. Please wait a few minutes before trying again, or check your inbox and spam folder for the latest email.";
+    }
     if (lower.includes("redirect") && lower.includes("not allowed")) {
       return "This confirmation redirect URL is not allowed in Supabase. Add this site's email-verification.html URL under Authentication > URL Configuration > Redirect URLs.";
     }
