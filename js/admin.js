@@ -43,6 +43,28 @@
     })[char]);
   }
 
+  function parseYouTubeVideoId(value) {
+    const input = String(value || "").trim();
+    if (!input) return "";
+    if (/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
+    try {
+      const url = new URL(input);
+      const host = url.hostname.replace(/^www\./, "");
+      let id = "";
+      if (host === "youtu.be") {
+        id = url.pathname.split("/").filter(Boolean)[0] || "";
+      } else if (host.endsWith("youtube.com") || host.endsWith("youtube-nocookie.com")) {
+        id =
+          url.searchParams.get("v") ||
+          url.pathname.match(/\/(?:embed|shorts|live)\/([a-zA-Z0-9_-]{11})/)?.[1] ||
+          "";
+      }
+      return /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : "";
+    } catch (error) {
+      return "";
+    }
+  }
+
   function formatMoney(amount, currency) {
     const value = Number(amount || 0);
     const code = currency || "NGN";
@@ -817,9 +839,15 @@
         const formData = new FormData(form);
         const courseId = formData.get("course_id");
         const videoProvider = formData.get("video_provider") || "storage";
+        const streamInput = String(formData.get("stream_embed_url") || "").trim();
+        const normalizedStream = videoProvider === "youtube" ? parseYouTubeVideoId(streamInput) : streamInput;
         const video = formData.get("video");
         const assignment = formData.get("assignment");
         const resource = formData.get("resource");
+
+        if (videoProvider === "youtube" && streamInput && !normalizedStream) {
+          throw new Error("Paste a valid YouTube link or 11-character video ID.");
+        }
 
         setMessage("Uploading files. Please keep this tab open.", "success");
 
@@ -839,8 +867,8 @@
           video_provider: videoProvider,
           video_bucket: "course-videos",
           video_path: videoPath,
-          video_url: formData.get("stream_embed_url") || "",
-          stream_embed_url: formData.get("stream_embed_url") || "",
+          video_url: normalizedStream,
+          stream_embed_url: normalizedStream,
           assignment_bucket: "course-assignments",
           assignment_path: assignmentPath,
           resource_bucket: "course-materials",

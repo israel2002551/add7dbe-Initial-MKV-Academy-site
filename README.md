@@ -106,6 +106,13 @@ Lesson videos and assignments are not public links. The dashboard requests a
 temporary signed URL from Supabase Storage only when the logged-in student has
 access to the course.
 
+For the first course batch, YouTube Unlisted lessons use `video_provider =
+youtube`. Admins can paste a full YouTube URL, short link, embed URL, or raw
+video ID; the app stores only the validated video ID. Run
+`database/upgrade-youtube-lesson-player.sql` so students fetch that ID through
+`get_lesson_video_source`, which checks active enrollment and logs each video
+request.
+
 ### Email Verification
 
 Registration uses Supabase Auth confirmation emails. Enable this in Supabase:

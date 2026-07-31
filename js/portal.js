@@ -10,6 +10,9 @@
   let remoteProgress = {};
   let submissionStatus = {};
   let reviewNewsletterOpen = true;
+  let currentPortalCourses = [];
+  let youtubePlayer = null;
+  let youtubeApiPromise = null;
 
   const LOCAL_PREVIEW_COURSES = [
     {
@@ -133,7 +136,7 @@
     const courseIds = activeEnrollments.map((item) => item.course_id);
     const { data: lessons, error: lessonsError } = await supa.client
       .from("lessons")
-      .select("*")
+      .select("id, course_id, title, chapter_title, chapter_order, description, video_provider, video_bucket, video_path, assignment_bucket, assignment_path, resource_bucket, resource_path, sort_order, unlock_after_days, created_at")
       .in("course_id", courseIds)
       .order("chapter_order", { ascending: true })
       .order("sort_order", { ascending: true });
@@ -231,7 +234,8 @@
     const unlocked = isUnlocked(course, lesson);
     const submitted = submissionStatus[lesson.id];
     const canSubmit = lesson.assignment_path && !String(lesson.id).startsWith("preview-");
-    const hasExternalVideo = lesson.video_provider && lesson.video_provider !== "storage" && (lesson.stream_embed_url || lesson.video_url);
+    const hasYoutubeVideo = lesson.video_provider === "youtube";
+    const hasExternalVideo = lesson.video_provider && !["storage", "youtube"].includes(lesson.video_provider);
     return `
       <div class="py-4 border-t border-slate-100" data-lesson-row="${lesson.id}">
         <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
@@ -251,8 +255,10 @@
             ${
               !unlocked
                 ? `<span class="text-sm text-slate-400 px-4 py-2">Locked</span>`
+                : hasYoutubeVideo
+                ? `<button data-open-youtube-video data-lesson-id="${lesson.id}" data-course-id="${course.id}" class="bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg px-4 py-2">Watch</button>`
                 : hasExternalVideo
-                ? `<button data-open-external-video data-url="${lesson.stream_embed_url || lesson.video_url}" class="bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg px-4 py-2">Watch</button>`
+                ? `<button disabled class="bg-slate-100 text-slate-400 text-sm font-semibold rounded-lg px-4 py-2">Stream coming soon</button>`
                 : lesson.video_path
                 ? `<button data-open-video data-bucket="${lesson.video_bucket || "course-videos"}" data-path="${lesson.video_path}" class="bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg px-4 py-2">Watch</button>`
                 : `<span class="text-sm text-slate-300 px-4 py-2">Video coming soon</span>`
@@ -326,29 +332,6 @@
         </div>
       </details>
     `;
-  }
-
-  function embedUrl(value) {
-    const url = String(value || "").trim();
-    if (!url) return "";
-    try {
-      const parsed = new URL(url);
-      if (parsed.hostname.includes("youtu.be")) {
-        const id = parsed.pathname.replace("/", "");
-        return id ? `https://www.youtube-nocookie.com/embed/${id}` : url;
-      }
-      if (parsed.hostname.includes("youtube.com")) {
-        const id = parsed.searchParams.get("v") || parsed.pathname.split("/").pop();
-        return id ? `https://www.youtube-nocookie.com/embed/${id}` : url;
-      }
-      if (parsed.hostname.includes("drive.google.com") && parsed.pathname.includes("/file/d/")) {
-        const id = parsed.pathname.split("/file/d/")[1]?.split("/")[0];
-        return id ? `https://drive.google.com/file/d/${id}/preview` : url;
-      }
-    } catch (e) {
-      return url;
-    }
-    return url;
   }
 
   function courseCard(course, index) {
@@ -429,9 +412,31 @@
       });
     });
 
-    document.querySelectorAll("[data-open-external-video]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        openVideoPlayer(embedUrl(btn.getAttribute("data-url")), btn.closest("[data-lesson-row]")?.querySelector("h4")?.textContent || "Lesson video", true);
+    document.querySelectorAll("[data-open-youtube-video]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!window.MKV_SUPABASE || !window.MKV_SUPABASE.isConfigured) {
+          window.alert("Video playback will work after Supabase is configured.");
+          return;
+        }
+        const lessonId = btn.getAttribute("data-lesson-id");
+        const courseId = btn.getAttribute("data-course-id");
+        btn.disabled = true;
+        btn.textContent = "Loading...";
+        const { data, error } = await window.MKV_SUPABASE.client.rpc("get_lesson_video_source", {
+          p_lesson_id: lessonId,
+        });
+        btn.disabled = false;
+        btn.textContent = "Watch";
+        if (error) {
+          window.alert(error.message);
+          return;
+        }
+        const source = Array.isArray(data) ? data[0] : data;
+        if (!source?.video_id || source.provider !== "youtube") {
+          window.alert("This lesson video is not ready yet.");
+          return;
+        }
+        openYouTubePlayer(source.video_id, btn.closest("[data-lesson-row]")?.querySelector("h4")?.textContent || "Lesson video", lessonId, courseId);
       });
     });
 
@@ -481,6 +486,103 @@
     });
   }
 
+  function loadYouTubeApi() {
+    if (window.YT?.Player) return Promise.resolve(window.YT);
+    if (youtubeApiPromise) return youtubeApiPromise;
+    youtubeApiPromise = new Promise((resolve) => {
+      const previousReady = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof previousReady === "function") previousReady();
+        resolve(window.YT);
+      };
+      const script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
+      script.async = true;
+      document.head.appendChild(script);
+    });
+    return youtubeApiPromise;
+  }
+
+  function nextLessonAfter(lessonId) {
+    for (const course of currentPortalCourses || []) {
+      const lessons = groupLessonsByChapter(course.lessons).flatMap((chapter) => chapter.lessons);
+      const index = lessons.findIndex((lesson) => lesson.id === lessonId);
+      if (index >= 0) return { course, lesson: lessons[index + 1] || null };
+    }
+    return { course: null, lesson: null };
+  }
+
+  async function completeLessonAndMoveNext(lessonId, courseId) {
+    await setComplete(lessonId, true);
+    if (courseId && window.MKV_CURRENT_USER && window.MKV_SUPABASE?.isConfigured) {
+      await window.MKV_SUPABASE.client.rpc("issue_certificate_if_complete", {
+        p_user_id: window.MKV_CURRENT_USER.id,
+        p_course_id: courseId,
+      });
+      loadCertificates();
+    }
+    const { lesson: nextLesson } = nextLessonAfter(lessonId);
+    closeVideoPlayer();
+    renderCourses(currentPortalCourses);
+    if (nextLesson) {
+      setTimeout(() => {
+        document.querySelector(`[data-lesson-row="${nextLesson.id}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 0);
+    }
+  }
+
+  async function openYouTubePlayer(videoId, title, lessonId, courseId) {
+    const viewer = document.getElementById("student-video-viewer");
+    const frame = document.getElementById("student-video-frame");
+    const titleEl = document.getElementById("student-video-title");
+    if (!viewer || !frame || !/^[a-zA-Z0-9_-]{11}$/.test(String(videoId || ""))) return;
+
+    if (youtubePlayer?.destroy) youtubePlayer.destroy();
+    youtubePlayer = null;
+    titleEl.textContent = title || "Lesson video";
+    const playerId = `youtube-player-${Date.now()}`;
+    frame.innerHTML = `
+      <div class="relative h-full w-full overflow-hidden rounded-b-lg bg-slate-950">
+        <div data-youtube-loading class="absolute inset-0 animate-pulse bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950"></div>
+        <div id="${playerId}" class="h-full w-full"></div>
+        <div data-youtube-complete class="hidden absolute inset-0 flex items-center justify-center bg-slate-950/80 p-6">
+          <button type="button" data-youtube-next class="inline-flex items-center justify-center rounded-xl bg-brand-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-brand-600/25 transition-all hover:bg-brand-700">
+            Lesson complete &rarr; Next lesson
+          </button>
+        </div>
+      </div>
+    `;
+    viewer.classList.remove("hidden");
+    viewer.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    const api = await loadYouTubeApi();
+    youtubePlayer = new api.Player(playerId, {
+      host: "https://www.youtube-nocookie.com",
+      videoId,
+      playerVars: {
+        rel: 0,
+        modestbranding: 1,
+        iv_load_policy: 3,
+        disablekb: 1,
+        playsinline: 1,
+        fs: 1,
+        enablejsapi: 1,
+        origin: window.location.origin,
+      },
+      events: {
+        onReady: () => {
+          frame.querySelector("[data-youtube-loading]")?.classList.add("hidden");
+        },
+        onStateChange: (event) => {
+          if (event.data === api.PlayerState.ENDED) {
+            frame.querySelector("[data-youtube-complete]")?.classList.remove("hidden");
+          }
+        },
+      },
+    });
+    frame.querySelector("[data-youtube-next]")?.addEventListener("click", () => completeLessonAndMoveNext(lessonId, courseId));
+  }
+
   function openVideoPlayer(url, title, embed) {
     const viewer = document.getElementById("student-video-viewer");
     const frame = document.getElementById("student-video-frame");
@@ -500,6 +602,8 @@
   function closeVideoPlayer() {
     const viewer = document.getElementById("student-video-viewer");
     const frame = document.getElementById("student-video-frame");
+    if (youtubePlayer?.destroy) youtubePlayer.destroy();
+    youtubePlayer = null;
     if (frame) frame.innerHTML = "";
     if (viewer) viewer.classList.add("hidden");
   }
@@ -642,6 +746,7 @@
   function renderCourses(courses) {
     const list = document.getElementById("my-courses-list");
     if (!list) return;
+    currentPortalCourses = courses || [];
 
     if (!courses.length) {
       list.innerHTML = emptyState(
