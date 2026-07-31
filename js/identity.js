@@ -136,11 +136,15 @@
   }
 
   function friendlyAuthError(error) {
+    const errorName = String((error && error.name) || "");
     const message =
       (error && (error.message || error.error_description || error.msg)) ||
       (typeof error === "string" ? error : "") ||
       "Authentication failed. Please try again, and check the browser console if this continues.";
     const lower = message.toLowerCase();
+    if (errorName.includes("AuthRetryableFetchError") || message === "{}") {
+      return "Supabase could not complete signup. Check Auth email confirmation settings, allowed redirect URLs, and Supabase Auth logs for the server error.";
+    }
     if (lower.includes("email not confirmed") || lower.includes("confirm")) {
       return "Email not verified. Open the verification link sent to your inbox before logging in.";
     }
