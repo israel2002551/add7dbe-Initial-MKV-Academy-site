@@ -136,7 +136,10 @@
   }
 
   function friendlyAuthError(error) {
-    const message = error && error.message ? error.message : "Authentication failed.";
+    const message =
+      (error && (error.message || error.error_description || error.msg)) ||
+      (typeof error === "string" ? error : "") ||
+      "Authentication failed. Please try again, and check the browser console if this continues.";
     const lower = message.toLowerCase();
     if (lower.includes("email not confirmed") || lower.includes("confirm")) {
       return "Email not verified. Open the verification link sent to your inbox before logging in.";
@@ -146,6 +149,12 @@
     }
     if (lower.includes("invalid login credentials")) {
       return "Invalid email or password. Check the details and try again.";
+    }
+    if (lower.includes("redirect") && lower.includes("not allowed")) {
+      return "This confirmation redirect URL is not allowed in Supabase. Add this site's email-verification.html URL under Authentication > URL Configuration > Redirect URLs.";
+    }
+    if (lower.includes("failed to fetch") || lower.includes("network")) {
+      return "Could not reach Supabase. Check your internet connection, Supabase URL, anon key, and browser console.";
     }
     return message;
   }
@@ -294,16 +303,25 @@
           return;
         }
         const username = generateUsername(fullName, email);
-        const { data, error } = await window.MKV_SUPABASE.client.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: fullName, username },
-            emailRedirectTo: verificationRedirectUrl(),
-          },
-        });
+        let signupResult;
+        try {
+          signupResult = await window.MKV_SUPABASE.client.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { full_name: fullName, username },
+              emailRedirectTo: verificationRedirectUrl(),
+            },
+          });
+        } catch (error) {
+          showAuthMessage(friendlyAuthError(error), "error");
+          console.error("Signup failed", error);
+          return;
+        }
+        const { data, error } = signupResult;
         if (error) {
           showAuthMessage(friendlyAuthError(error), "error");
+          console.error("Signup failed", error);
           return;
         }
         if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
