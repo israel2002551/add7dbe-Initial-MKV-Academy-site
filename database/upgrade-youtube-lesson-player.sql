@@ -38,6 +38,7 @@ set search_path = public
 as $$
 declare
   v_lesson public.lessons%rowtype;
+  v_raw_video text;
   v_video_id text;
 begin
   if auth.uid() is null then
@@ -67,11 +68,25 @@ begin
     raise exception 'This lesson is not a YouTube lesson';
   end if;
 
-  v_video_id := coalesce(nullif(v_lesson.stream_embed_url, ''), nullif(v_lesson.video_url, ''));
+  v_raw_video := coalesce(nullif(v_lesson.stream_embed_url, ''), nullif(v_lesson.video_url, ''));
+  v_video_id := case
+    when v_raw_video ~ '^[A-Za-z0-9_-]{11}$' then v_raw_video
+    when v_raw_video ~ 'youtu\.be/[A-Za-z0-9_-]{11}' then substring(v_raw_video from 'youtu\.be/([A-Za-z0-9_-]{11})')
+    when v_raw_video ~ '[?&]v=[A-Za-z0-9_-]{11}' then substring(v_raw_video from '[?&]v=([A-Za-z0-9_-]{11})')
+    when v_raw_video ~ '/(?:embed|shorts|live)/[A-Za-z0-9_-]{11}' then substring(v_raw_video from '/(?:embed|shorts|live)/([A-Za-z0-9_-]{11})')
+    else null
+  end;
 
   if v_video_id is null or v_video_id !~ '^[A-Za-z0-9_-]{11}$' then
     raise exception 'Lesson video is not configured';
   end if;
+
+  update public.lessons
+  set
+    stream_embed_url = v_video_id,
+    video_url = v_video_id
+  where id = v_lesson.id
+    and coalesce(stream_embed_url, video_url, '') <> v_video_id;
 
   insert into public.lesson_video_access_logs (user_id, lesson_id, course_id, video_provider, video_id, user_agent)
   values (
