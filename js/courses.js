@@ -213,7 +213,7 @@
     content.innerHTML = `
       <div class="relative min-h-60 bg-gradient-to-br ${cardTopClass(course.cardStyle)} p-6 text-white">
         ${course.thumbnailUrl ? `<img src="${course.thumbnailUrl}" alt="" class="absolute inset-0 h-full w-full object-cover" /><div class="absolute inset-0 bg-slate-950/50"></div>` : ""}
-        <button type="button" data-close-course-preview class="absolute right-4 top-4 z-10 rounded-lg bg-white/15 px-3 py-2 text-sm font-semibold text-white hover:bg-white/25">Close</button>
+        <button type="button" data-close-course-preview class="absolute right-4 top-4 z-10 inline-flex min-w-16 shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-white/15 px-3 py-2 text-sm font-semibold text-white hover:bg-white/25">Close</button>
         <div class="relative z-10 max-w-2xl pt-16">
           <p class="font-technical text-xs uppercase tracking-widest text-cyan-100">${escapeText(course.category)}</p>
           <h2 class="mt-3 text-3xl font-extrabold tracking-tight">${escapeText(course.title)}</h2>
@@ -317,12 +317,12 @@
     content.innerHTML = `
       <div class="border-b border-slate-100 p-5">
         <div class="flex items-start justify-between gap-4">
-          <div>
+          <div class="min-w-0">
             <p class="font-technical text-xs uppercase tracking-widest text-brand-700">Checkout</p>
             <h2 class="mt-1 text-xl font-bold text-slate-900">${escapeText(course.title)}</h2>
             <p class="mt-1 text-sm text-slate-500">${escapeText(course.level)} - ${escapeText(course.duration)}</p>
           </div>
-          <button type="button" data-close-checkout class="rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">Close</button>
+          <button type="button" data-close-checkout class="inline-flex min-w-16 shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">Close</button>
         </div>
       </div>
       <div class="p-5">
@@ -344,11 +344,11 @@
           <label for="checkout-coupon-code" class="block text-sm font-semibold text-slate-700 mb-2">Coupon code</label>
           <div class="flex gap-2">
             <input id="checkout-coupon-code" autocomplete="off" placeholder="WELCOME20" class="min-w-0 flex-1 rounded-lg border border-slate-200 px-4 py-3 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
-            <button type="button" data-apply-checkout-coupon class="rounded-lg bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 transition-all hover:bg-slate-200">Apply</button>
+            <button type="button" data-apply-checkout-coupon class="inline-flex min-w-20 shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 transition-all hover:bg-slate-200">Apply</button>
           </div>
           <p id="checkout-coupon-message" class="mt-3 hidden"></p>
         </div>
-        <button type="button" data-confirm-checkout class="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-brand-600 px-5 py-3 font-bold text-white shadow-lg shadow-brand-600/25 transition-all hover:bg-brand-700">Enroll Now</button>
+        <button type="button" data-confirm-checkout class="mt-6 inline-flex w-full items-center justify-center whitespace-nowrap rounded-xl bg-brand-600 px-5 py-3 font-bold text-white shadow-lg shadow-brand-600/25 transition-all hover:bg-brand-700">Enroll Now</button>
       </div>
     `;
     modal.classList.remove("hidden");

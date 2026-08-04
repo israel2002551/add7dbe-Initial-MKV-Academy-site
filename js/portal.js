@@ -256,21 +256,21 @@
               !unlocked
                 ? `<span class="text-sm text-slate-400 px-4 py-2">Locked</span>`
                 : hasYoutubeVideo
-                ? `<button data-open-youtube-video data-lesson-id="${lesson.id}" data-course-id="${course.id}" class="bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg px-4 py-2">Watch</button>`
+                ? `<button data-open-youtube-video data-lesson-id="${lesson.id}" data-course-id="${course.id}" class="inline-flex shrink-0 items-center justify-center whitespace-nowrap bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg px-4 py-2">Watch</button>`
                 : hasExternalVideo
-                ? `<button disabled class="bg-slate-100 text-slate-400 text-sm font-semibold rounded-lg px-4 py-2">Stream coming soon</button>`
+                ? `<button disabled class="inline-flex shrink-0 items-center justify-center whitespace-nowrap bg-slate-100 text-slate-400 text-sm font-semibold rounded-lg px-4 py-2">Stream coming soon</button>`
                 : lesson.video_path
-                ? `<button data-open-video data-bucket="${lesson.video_bucket || "course-videos"}" data-path="${lesson.video_path}" class="bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg px-4 py-2">Watch</button>`
+                ? `<button data-open-video data-bucket="${lesson.video_bucket || "course-videos"}" data-path="${lesson.video_path}" class="inline-flex shrink-0 items-center justify-center whitespace-nowrap bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg px-4 py-2">Watch</button>`
                 : `<span class="text-sm text-slate-300 px-4 py-2">Video coming soon</span>`
             }
             ${
               unlocked && lesson.assignment_path
-                ? `<button data-download-file data-bucket="${lesson.assignment_bucket || "course-assignments"}" data-path="${lesson.assignment_path}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Assignment</button>`
+                ? `<button data-download-file data-bucket="${lesson.assignment_bucket || "course-assignments"}" data-path="${lesson.assignment_path}" class="inline-flex shrink-0 items-center justify-center whitespace-nowrap bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Assignment</button>`
                 : ""
             }
             ${
               unlocked && lesson.resource_path
-                ? `<button data-download-file data-bucket="${lesson.resource_bucket || "course-materials"}" data-path="${lesson.resource_path}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Resource</button>`
+                ? `<button data-download-file data-bucket="${lesson.resource_bucket || "course-materials"}" data-path="${lesson.resource_path}" class="inline-flex shrink-0 items-center justify-center whitespace-nowrap bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg px-4 py-2">Resource</button>`
                 : ""
             }
           </div>
@@ -325,7 +325,7 @@
             <p class="font-semibold text-slate-900">Chapter ${chapter.order}: ${chapter.title}</p>
             <p class="mt-1 text-xs text-slate-400">${chapter.lessons.length} video lesson${chapter.lessons.length === 1 ? "" : "s"}</p>
           </div>
-          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Open</span>
+          <span class="inline-flex min-w-14 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Open</span>
         </summary>
         <div class="pb-2">
           ${chapter.lessons.map((lesson) => lessonRow(lesson, course)).join("")}
@@ -342,16 +342,16 @@
       <article class="mkv-card">
         <details ${index === 0 ? "open" : ""}>
           <summary class="flex cursor-pointer list-none flex-col gap-4 p-6 md:flex-row md:items-start md:justify-between">
-            <div>
+            <div class="min-w-0">
               <p class="font-technical text-xs uppercase tracking-widest text-brand-700">Enrolled Course</p>
               <h3 class="mt-2 text-xl font-bold text-slate-900">${course.title}</h3>
               ${course.description ? `<p class="mt-2 text-sm text-slate-600">${course.description}</p>` : ""}
               ${course.expires_at ? `<p class="mt-2 text-xs font-semibold text-amber-700">Access expires ${new Date(course.expires_at).toLocaleDateString()}</p>` : ""}
               <p class="mt-3 text-xs font-semibold text-slate-500">${chapterCount} chapter${chapterCount === 1 ? "" : "s"} - ${lessonCount} lesson${lessonCount === 1 ? "" : "s"}</p>
             </div>
-            <div class="flex flex-wrap items-center gap-2 md:justify-end">
-              <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">${pct}% complete</span>
-              <span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">Open / Close</span>
+            <div class="flex shrink-0 flex-wrap items-center gap-2 md:justify-end">
+              <span class="inline-flex min-w-24 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">${pct}% complete</span>
+              <span class="inline-flex min-w-28 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">Open / Close</span>
             </div>
           </summary>
           <div class="px-6 pb-6">
@@ -371,7 +371,7 @@
                   <p class="font-semibold text-slate-900">Overall Course Assessment</p>
                   <p class="mt-1 text-sm text-slate-600">Submit your final CAD files, reports, or ZIP package for instructor grading when you complete the course.</p>
                 </div>
-                <button type="button" data-portal-jump="project-review" class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">Submit Final Project</button>
+                <button type="button" data-portal-jump="project-review" class="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">Submit Final Project</button>
               </div>
             </div>
           </div>

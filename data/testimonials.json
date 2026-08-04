@@ -1,34 +1,42 @@
 [
   {
-    "id": "testimonial-1",
-    "name": "CAD Bootcamp Graduate",
-    "role": "SolidWorks: Beginner to CSWA",
-    "quote": "The program made parametric modeling feel structured. I now build parts with cleaner sketches, stronger feature trees, and more confidence preparing for certification.",
+    "id": "nwokolo-victor-oluebubechukwu",
+    "name": "Nwokolo Victor Oluebubechukwu",
+    "role": "MKV Academy Student",
+    "quote": "MKV Academy made learning CAD much easier than I expected. The lessons were practical, and I appreciated that every concept was backed by real design examples. I left the training with skills I can confidently apply.",
     "image": "assets/images/testimonial-1.jpg",
     "rating": 5
   },
   {
-    "id": "testimonial-2",
-    "name": "Mechanical Design Learner",
-    "role": "Advanced Part & Assembly Design",
-    "quote": "The advanced assembly sessions helped me understand how professional CAD files are organized, reviewed, and prepared for real production work.",
+    "id": "nigel-tadiwanashe-maringwa",
+    "name": "Nigel Tadiwanashe Maringwa",
+    "role": "MKV Academy Student",
+    "quote": "What I enjoyed most was the hands-on approach. Instead of just watching tutorials, we worked on actual projects that helped me understand how engineers use CAD in practice. It was a valuable experience.",
     "image": "assets/images/testimonial-2.jpg",
     "rating": 5
   },
   {
-    "id": "testimonial-3",
-    "name": "Simulation Track Student",
-    "role": "FEA Simulation & Mechanics",
-    "quote": "The mentor feedback was direct and practical. I learned how to explain assumptions, inspect mesh quality, and make better design decisions from simulation results.",
+    "id": "emmanuel-olobo-haruna",
+    "name": "Emmanuel Olobo Haruna",
+    "role": "MKV Academy Student",
+    "quote": "The instructors were patient and always willing to answer questions. They made sure everyone understood each topic before moving on, which made the learning experience comfortable and effective.",
     "image": "assets/images/testimonial-3.jpg",
     "rating": 5
   },
   {
-    "id": "testimonial-4",
-    "name": "Engineering Team Lead",
-    "role": "Corporate Training Client",
-    "quote": "The training gave our team a clearer modeling standard and a more reliable way to review CAD files before they move into manufacturing discussions.",
+    "id": "chiamaka-josephat",
+    "name": "Chiamaka Josephat",
+    "role": "MKV Academy Student",
+    "quote": "I joined MKV Academy to improve my design skills, and the training exceeded my expectations. The classes were well organized, and I gained the confidence to create my own models from scratch.",
     "image": "assets/images/testimonial-4.jpg",
+    "rating": 5
+  },
+  {
+    "id": "joseph-enzoboro",
+    "name": "Joseph Enzoboro",
+    "role": "MKV Academy Student",
+    "quote": "MKV Academy gave me a solid foundation in engineering design. I especially liked the emphasis on good design practices rather than just learning software tools. I would recommend the training to anyone looking to build practical CAD skills.",
+    "image": "assets/images/testimonial-5.jpg",
     "rating": 5
   }
 ]

@@ -5,15 +5,16 @@
     "role": "Co-Founder & Lead Instructor, Marine Engineering",
     "bio": "One of the youngest recognized experts in his field, Joseph leads MKV Academy's core CAD and simulation curriculum, drawing on years of hands-on parametric modeling, workflow troubleshooting, and mentorship.",
     "specialties": ["SOLIDWORKS", "Parametric Modeling", "Engineering Mentorship"],
-    "image": "assets/images/instructor-joseph.jpg"
+    "image": "assets/images/founder-donald.jpg"
   },
   {
-    "id": "diamond",
-    "name": "Diamond",
+    "id": "joseph-celestine-diamond",
+    "name": "Joseph-Celestine Diamond",
     "role": "Co-Founder & Lead Instructor, Electrical Engineering",
-    "bio": "Diamond brings an electrical engineering lens to MKV's embedded systems and mechatronics tracks, helping students bridge mechanical design with real electrical constraints.",
-    "specialties": ["Embedded Systems", "Circuit Design", "Mechatronics"],
-    "image": "assets/images/instructor-diamond.jpg"
+    "bio": "Joseph-Celestine Diamond is an Electrical Engineer and passionate engineering educator dedicated to making high-quality CAD education practical, accessible, and engaging. He mentors students to think like engineers, not just software users, with a focus on SolidWorks, AutoCAD, engineering design, problem-solving, and manufacturable products.",
+    "email": "josephcelestinediamond@gmail.com",
+    "specialties": ["SolidWorks", "AutoCAD", "Engineering Design"],
+    "image": "assets/images/founder-diamond.jpg"
   },
   {
     "id": "simulation-fea-specialist",
